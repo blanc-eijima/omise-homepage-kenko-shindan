@@ -89,6 +89,22 @@ class FileNameTest(unittest.TestCase):
         self.assertIn("調査結果に無いドメイン名: other-shop.com", find_problems(bad, SCAN))
 
 
+class PhoneNumberTest(unittest.TestCase):
+    SCAN = {
+        **SCAN,
+        "checks": SCAN["checks"]
+        + [{"id": "map_listing", "status": "ok", "facts": {"listing_phone": "0300005678"}}],
+    }
+
+    def test_same_digits_with_hyphens_pass_but_other_numbers_do_not(self):
+        fine = good()
+        fine["summary"] = "登録の番号は 03-0000-5678 です。"
+        self.assertEqual(find_problems(fine, self.SCAN), [])
+        bad = good()
+        bad["summary"] = "登録の番号は 03-0000-9999 です。"
+        self.assertIn("調査結果に無い数字: 300009999", find_problems(bad, self.SCAN))
+
+
 class CountWordsTest(unittest.TestCase):
     def test_counting_words_pass_but_days_and_money_do_not(self):
         fine = good()

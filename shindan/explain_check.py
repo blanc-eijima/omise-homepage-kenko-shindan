@@ -20,6 +20,8 @@ _ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 _NUMBER = re.compile(r"\d+")
 # 「2つ」「3件」は文章の数え方で、調査の事実ではない。「3日」「3000円」は止める。
 _COUNT = re.compile(r"\d+(?=つ|点|件|項目|通|か所|箇所)")
+# 調査結果の電話番号は数字だけ。ハイフンで区切って書いても同じ番号として数える。
+_PHONE = re.compile(r"(?<![\d-])0\d{1,4}-\d{1,4}-\d{3,4}(?![\d-])")
 _DOMAIN = re.compile(r"[a-z0-9-]+(?:\.[a-z0-9-]+)+")
 # robots.txt や wp-config.php はファイルの名前で、ドメイン名ではない。
 _FILE_NAME = (".txt", ".php", ".html", ".htm", ".xml", ".css", ".js")
@@ -53,6 +55,7 @@ def _check_facts(explanation: dict, scan: dict) -> list[str]:
         ensure_ascii=False,
     )
     text = _COUNT.sub(" ", _normalize(_all_text(explanation)))
+    text = _PHONE.sub(lambda m: m.group().replace("-", ""), text)
     problems = [f"調査結果に無い数字: {n}" for n in sorted(_numbers(text) - _numbers(known))]
     problems += [f"調査結果に無いドメイン名: {d}" for d in sorted(_domains(text) - _domains(known))]
     return problems

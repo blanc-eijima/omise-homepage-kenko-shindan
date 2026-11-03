@@ -53,7 +53,11 @@ button:disabled { opacity: .55; cursor: wait; }
 #progress { margin: 20px 0 0; font-weight: 700; color: var(--brand); }
 #error { margin: 20px 0 0; font-weight: 700; color: var(--critical); }
 #summary { background: var(--panel); padding: 20px; border-radius: 6px; margin: 0; }
-.counts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0 0 12px; padding: 0; list-style: none; font-weight: 700; }
+.counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 0 0 16px; padding: 0; list-style: none; font-weight: 700; }
+.counts li { border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; }
+.counts .num { display: block; font-size: 40px; line-height: 1.2; }
+.counts .num small { font-size: 18px; margin-left: 2px; }
+.counts .none { color: var(--muted); font-weight: 400; }
 .card { border: 1px solid var(--line); border-left: 8px solid var(--line); border-radius: 6px; padding: 16px 20px; margin: 0 0 16px; }
 .card.critical { border-left-color: var(--critical); }
 .card.warn { border-left-color: var(--warn); }
@@ -83,6 +87,8 @@ button:disabled { opacity: .55; cursor: wait; }
   form, .actions, .copy, #progress, #error, .lead { display: none !important; }
   #letters { display: block !important; }
   h1 { font-size: 16pt; }
+  .counts .num { display: inline; font-size: 13pt; margin-left: 6pt; }
+  .counts .num small { font-size: 11pt; }
   h2 { font-size: 13pt; margin-top: 14pt; }
   .card, .letter { break-inside: avoid; padding: 8pt 10pt; margin-bottom: 8pt; }
   #letters { break-before: page; }
@@ -177,7 +183,11 @@ function showReport(report) {
   counts.replaceChildren();
   for (const [status, state] of Object.entries(STATES)) {
     const count = checks.filter((check) => check.status === status).length;
-    counts.append(el("li", state.text + " " + count + "件", "count-" + status));
+    const item = el("li", state.text, count ? "count-" + status : "none");
+    const number = el("span", String(count), "num");
+    number.append(el("small", "件"));
+    item.append(number);
+    counts.append(item);
   }
   const list = $("checked");
   list.replaceChildren();

@@ -18,6 +18,8 @@ TOPICS = {
 
 _ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 _NUMBER = re.compile(r"\d+")
+# 「2つ」「3件」は文章の数え方で、調査の事実ではない。「3日」「3000円」は止める。
+_COUNT = re.compile(r"\d+(?=つ|点|件|項目|通|か所|箇所)")
 _DOMAIN = re.compile(r"[a-z0-9-]+(?:\.[a-z0-9-]+)+")
 
 
@@ -45,7 +47,7 @@ def _check_facts(explanation: dict, scan: dict) -> list[str]:
         {"host": scan["host"], "facts": [c["facts"] for c in scan["checks"]]},
         ensure_ascii=False,
     )
-    text = _all_text(explanation)
+    text = _COUNT.sub(" ", _normalize(_all_text(explanation)))
     problems = [f"調査結果に無い数字: {n}" for n in sorted(_numbers(text) - _numbers(known))]
     problems += [f"調査結果に無いドメイン名: {d}" for d in sorted(_domains(text) - _domains(known))]
     return problems

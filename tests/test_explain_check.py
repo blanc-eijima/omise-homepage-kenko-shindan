@@ -79,6 +79,17 @@ class FindProblemsTest(unittest.TestCase):
         self.assertEqual(find_problems(fine, SCAN), [])
 
 
+class CountWordsTest(unittest.TestCase):
+    def test_counting_words_pass_but_days_and_money_do_not(self):
+        fine = good()
+        fine["summary"] = "気になる点が２つ、確認が3件あります。"
+        self.assertEqual(find_problems(fine, SCAN), [])
+        for text, number in [("あと3日です。", 3), ("費用は3000円です。", 3000)]:
+            bad = good()
+            bad["summary"] = text
+            self.assertIn(f"調査結果に無い数字: {number}", find_problems(bad, SCAN))
+
+
 class JargonInDomainTest(unittest.TestCase):
     def test_domain_containing_jargon_letters_passes(self):
         scan = {**SCAN, "host": "expired.badssl.com"}

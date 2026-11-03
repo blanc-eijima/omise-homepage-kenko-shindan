@@ -77,6 +77,20 @@ class FindProblemsTest(unittest.TestCase):
         self.assertEqual(find_problems(fine, SCAN), [])
 
 
+class JargonInDomainTest(unittest.TestCase):
+    def test_domain_containing_jargon_letters_passes(self):
+        scan = {**SCAN, "host": "expired.badssl.com"}
+        fine = good()
+        fine["summary"] = "expired.badssl.com の更新が近づいています。"
+        self.assertEqual(find_problems(fine, scan), [])
+
+    def test_fullwidth_and_lowercase_jargon_fail(self):
+        for text in ["ＳＳＬの問題です。", "sslの問題です。", "httpsの設定です。"]:
+            bad = good()
+            bad["summary"] = text
+            self.assertTrue(any("専門用語" in p for p in find_problems(bad, SCAN)), text)
+
+
 class DateFormTest(unittest.TestCase):
     def test_iso_date_in_owner_field_fails(self):
         bad = good()

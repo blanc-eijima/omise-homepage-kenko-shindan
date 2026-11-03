@@ -33,7 +33,9 @@ python -m venv .venv
 .venv\Scripts\python -m shindan.cli --explain https://example.com
 ```
 
-`--explain` には `.env` の `ANTHROPIC_API_KEY` を使います。
+画面で使うときは `.venv\Scripts\python -m shindan.web` を実行し、`http://127.0.0.1:8765/` を開きます。
+
+`--explain` と画面の説明文には `.env` の `ANTHROPIC_API_KEY` を使います。
 
 ## 調べ方の約束
 

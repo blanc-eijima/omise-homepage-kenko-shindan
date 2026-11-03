@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>おみせのホームページ健康診断</title>
+<style>
+:root {
+  --ink: #17233a;
+  --muted: #55607a;
+  --line: #d4d9e4;
+  --panel: #f1f4f9;
+  --brand: #14508c;
+  --critical: #b3261e;
+  --warn: #9a5b00;
+  --unknown: #55607a;
+  --ok: #1d6f42;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #fff;
+  color: var(--ink);
+  font: 18px/1.8 "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+}
+.wrap { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 30px; line-height: 1.4; margin: 0 0 8px; }
+h2 { font-size: 23px; margin: 40px 0 12px; }
+.lead { color: var(--muted); margin: 0 0 24px; }
+label { display: block; font-weight: 700; margin-top: 16px; }
+label small { font-weight: 400; color: var(--muted); }
+input {
+  width: 100%;
+  padding: 12px;
+  font: inherit;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+}
+input:focus { outline: 3px solid var(--brand); outline-offset: 1px; }
+button {
+  font: inherit;
+  font-weight: 700;
+  padding: 12px 24px;
+  border-radius: 6px;
+  border: 2px solid var(--brand);
+  background: #fff;
+  color: var(--brand);
+  cursor: pointer;
+}
+button.primary { background: var(--brand); color: #fff; }
+button:disabled { opacity: .55; cursor: wait; }
+#go { margin-top: 20px; }
+#progress { margin: 20px 0 0; font-weight: 700; color: var(--brand); }
+#error { margin: 20px 0 0; font-weight: 700; color: var(--critical); }
+#summary { background: var(--panel); padding: 20px; border-radius: 6px; margin: 0; }
+.counts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0 0 12px; padding: 0; list-style: none; font-weight: 700; }
+.card { border: 1px solid var(--line); border-left: 8px solid var(--line); border-radius: 6px; padding: 16px 20px; margin: 0 0 16px; }
+.card.critical { border-left-color: var(--critical); }
+.card.warn { border-left-color: var(--warn); }
+.card.unknown { border-left-color: var(--unknown); }
+.card h3 { font-size: 20px; margin: 0 0 8px; }
+.badge { font-size: 16px; font-weight: 700; margin-right: 8px; }
+.critical .badge, .count-critical { color: var(--critical); }
+.warn .badge, .count-warn { color: var(--warn); }
+.unknown .badge, .count-unknown { color: var(--unknown); }
+.count-ok { color: var(--ok); }
+.card dl { margin: 0; }
+.card dt { font-weight: 700; margin-top: 8px; }
+.card dd { margin: 0; }
+.checked { margin: 0; padding: 0; list-style: none; }
+.checked li { padding: 6px 0; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 16px; }
+.checked .state { font-weight: 700; white-space: nowrap; }
+.letter { border: 1px solid var(--line); border-radius: 6px; padding: 16px 20px; margin: 0 0 16px; }
+.letter h3 { font-size: 20px; margin: 0 0 4px; }
+.letter .subject { font-weight: 700; margin: 0 0 8px; }
+.letter pre { white-space: pre-wrap; font: inherit; margin: 0 0 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.note { color: var(--muted); font-size: 16px; margin-top: 32px; }
+[hidden] { display: none !important; }
+@media print {
+  body { font-size: 11pt; line-height: 1.6; }
+  .wrap { max-width: none; padding: 0; }
+  form, .actions, .copy, #progress, #error, .lead { display: none !important; }
+  #letters { display: block !important; }
+  h1 { font-size: 16pt; }
+  h2 { font-size: 13pt; margin-top: 14pt; }
+  .card, .letter { break-inside: avoid; padding: 8pt 10pt; margin-bottom: 8pt; }
+  #letters { break-before: page; }
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>おみせのホームページ健康診断</h1>
+  <p class="lead">アドレスを入れると、外から見える範囲だけを調べて、いま何が起きていて、誰に何と頼めばよいかをお伝えします。</p>
+
+  <form id="form">
+    <label for="url">ホームページのアドレス</label>
+    <input id="url" name="url" type="text" inputmode="url" autocomplete="url" placeholder="例: https://www.example.jp/" required>
+    <label for="name">お店の名前と地域 <small>（任意・Googleマップで探すときに使います）</small></label>
+    <input id="name" name="name" type="text" placeholder="例: ○○花店 下松市">
+    <button id="go" class="primary" type="submit">診断する</button>
+  </form>
+
+  <p id="progress" role="status" hidden></p>
+  <p id="error" role="alert" hidden></p>
+
+  <section id="result" hidden>
+    <h2>診断の結果</h2>
+    <p id="target"></p>
+    <ul class="counts" id="counts"></ul>
+    <p id="summary" hidden></p>
+    <div id="cards-section" hidden>
+      <h2>急ぐ順の一覧</h2>
+      <div id="cards"></div>
+    </div>
+    <h2>調べた項目</h2>
+    <ul class="checked" id="checked"></ul>
+    <div class="actions">
+      <button id="show-letters" type="button" hidden>依頼文をつくる</button>
+      <button id="print" type="button">印刷する</button>
+    </div>
+    <div id="letters" hidden>
+      <h2>業者へ送る依頼文</h2>
+      <div id="letter-list"></div>
+    </div>
+    <p class="note">外から見える範囲だけを調べた結果です。実際の状況は、依頼先にご確認ください。「指摘なし」は、今回の調べ方で問題が見つからなかったという意味で、安全を保証するものではありません。</p>
+  </section>
+</main>
+
+<script>
+const LABELS = {
+  ssl_certificate: "安全な接続の証明書",
+  http_redirect: "安全な入り口への案内",
+  domain_expiry: "ドメインの期限",
+  page_response: "ページの表示",
+  site_software: "ホームページの仕組みの古さ",
+  search_settings: "検索に出るための設定",
+  mobile_view: "スマホ向けの設定",
+  mail_settings: "メールの設定",
+  contact_form: "お問い合わせフォームの送り先",
+  map_listing: "Googleマップとの電話番号",
+};
+const STATES = {
+  critical: { text: "すぐ対応", order: 0 },
+  warn: { text: "近いうちに", order: 1 },
+  unknown: { text: "調べられず", order: 2 },
+  ok: { text: "指摘なし", order: 3 },
+};
+const $ = (id) => document.getElementById(id);
+
+function el(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+
+async function post(path, payload) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error);
+  return data;
+}
+
+function showReport(report) {
+  $("target").textContent = "調べたサイト: " + report.host;
+  const checks = [...report.checks].sort((a, b) => STATES[a.status].order - STATES[b.status].order);
+  const counts = $("counts");
+  counts.replaceChildren();
+  for (const [status, state] of Object.entries(STATES)) {
+    const count = checks.filter((check) => check.status === status).length;
+    counts.append(el("li", state.text + " " + count + "件", "count-" + status));
+  }
+  const list = $("checked");
+  list.replaceChildren();
+  for (const check of checks) {
+    const row = el("li");
+    row.append(el("span", LABELS[check.id] || check.id));
+    row.append(el("span", STATES[check.status].text, "state count-" + check.status));
+    list.append(row);
+  }
+  $("result").hidden = false;
+}
+
+function makeCard(card) {
+  const box = el("article", undefined, "card " + card.status);
+  const title = el("h3");
+  title.append(el("span", STATES[card.status].text, "badge"));
+  title.append(LABELS[card.check_id] || card.check_id);
+  box.append(title);
+  const details = el("dl");
+  const rows = [
+    ["いま起きていること", card.what_is_happening],
+    ["放っておくと", card.trouble_if_left],
+    ["頼む先", card.who_to_ask],
+    ["次にすること", card.what_to_do],
+  ];
+  for (const [term, text] of rows) {
+    details.append(el("dt", term), el("dd", text));
+  }
+  box.append(details);
+  return box;
+}
+
+function makeLetter(letter) {
+  const box = el("article", undefined, "letter");
+  box.append(el("h3", letter.to + "あて"));
+  box.append(el("p", "件名: " + letter.subject, "subject"));
+  box.append(el("pre", letter.body));
+  const copy = el("button", "この文面をコピー", "copy");
+  copy.type = "button";
+  copy.addEventListener("click", async () => {
+    await navigator.clipboard.writeText("件名: " + letter.subject + "\n\n" + letter.body);
+    copy.textContent = "コピーしました";
+  });
+  box.append(copy);
+  return box;
+}
+
+function showExplanation(explanation) {
+  $("summary").textContent = explanation.summary;
+  $("summary").hidden = false;
+  $("cards").replaceChildren(...explanation.cards.map(makeCard));
+  $("cards-section").hidden = explanation.cards.length === 0;
+  $("letter-list").replaceChildren(...explanation.requests.map(makeLetter));
+  $("show-letters").hidden = explanation.requests.length === 0;
+}
+
+function reset() {
+  $("error").hidden = true;
+  $("result").hidden = true;
+  $("summary").hidden = true;
+  $("cards-section").hidden = true;
+  $("letters").hidden = true;
+  $("show-letters").hidden = true;
+}
+
+function setProgress(text) {
+  $("progress").textContent = text;
+  $("progress").hidden = !text;
+}
+
+function showError(message) {
+  $("error").textContent = message;
+  $("error").hidden = false;
+}
+
+$("form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  reset();
+  $("go").disabled = true;
+  try {
+    setProgress("ホームページを調べています…");
+    const scanned = await post("/api/scan", { url: $("url").value, name: $("name").value });
+    showReport(scanned.report);
+    setProgress("結果を分かりやすい言葉にしています（1分ほどかかることがあります）…");
+    const explained = await post("/api/explain", { id: scanned.id });
+    showExplanation(explained.explanation);
+  } catch (error) {
+    showError(error.message || "うまく調べられませんでした。もう一度お試しください");
+  } finally {
+    setProgress("");
+    $("go").disabled = false;
+  }
+});
+
+$("show-letters").addEventListener("click", () => {
+  $("letters").hidden = false;
+  $("show-letters").hidden = true;
+  $("letters").scrollIntoView({ behavior: "smooth" });
+});
+
+$("print").addEventListener("click", () => window.print());
+</script>
+</body>
+</html>

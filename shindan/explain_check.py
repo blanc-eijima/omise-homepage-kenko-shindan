@@ -5,7 +5,7 @@ import unicodedata
 
 NOT_A_REQUEST = {"自分で", "依頼は不要"}
 OWNER_FIELDS = ("what_is_happening", "trouble_if_left", "what_to_do")
-JARGON = ("SSL", "TLS", "DNS", "RDAP", "WHOIS", "HTTP", "リダイレクト")
+JARGON = ("SSL", "TLS", "DNS", "RDAP", "WHOIS", "HTTP", "HTTPS", "リダイレクト")
 # 調べていない項目について書くと、架空の指摘になる。キーは調査項目のid。
 TOPICS = {
     "site_software": ("WordPress", "PHP"),
@@ -87,8 +87,14 @@ def _check_jargon(explanation: dict) -> list[str]:
     """店主が読む欄に専門用語を残さない。依頼文は業者宛なので対象外。"""
     fields = [explanation["summary"]]
     fields += [card[name] for card in explanation["cards"] for name in OWNER_FIELDS]
-    text = "\n".join(fields).upper()
-    problems = [f"店主向けの欄の専門用語: {word}" for word in JARGON if word.upper() in text]
+    text = "\n".join(fields)
+    # ドメイン名の中の文字（badssl.com の ssl など）は専門用語として数えない。
+    words = _DOMAIN.sub(" ", unicodedata.normalize("NFKC", text).lower())
+    problems = [
+        f"店主向けの欄の専門用語: {word}"
+        for word in JARGON
+        if re.search(rf"(?<![a-z]){re.escape(word.lower())}(?![a-z])", words)
+    ]
     problems += [f"店主向けの欄の日付の形: {d}" for d in _ISO_DATE.findall(text)]
     return problems
 

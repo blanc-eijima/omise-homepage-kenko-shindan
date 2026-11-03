@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "deny": ["Read(./.env)", "Read(./.env.*)"],
+    "ask": ["Bash(flyctl deploy *)", "Bash(git push *)"]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "P=.venv/Scripts/python; [ -x \"$P\" ] || P=.venv/bin/python; PYTHONUTF8=1 \"$P\" -m unittest discover -s tests 1>&2 || exit 2"
+          }
+        ]
+      }
+    ]
+  }
+}

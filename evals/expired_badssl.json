@@ -1,0 +1,104 @@
+{
+  "scan": {
+    "host": "expired.badssl.com",
+    "checked_at": "2026-11-03T06:24:02+00:00",
+    "checks": [
+      {
+        "id": "ssl_certificate",
+        "status": "critical",
+        "facts": {
+          "https_available": true,
+          "expires_at": "2015-04-12",
+          "days_left": -4223,
+          "verify_error": "certificate has expired"
+        }
+      },
+      {
+        "id": "http_redirect",
+        "status": "ok",
+        "facts": {
+          "http_status": 301,
+          "location": "https://expired.badssl.com/",
+          "redirects_to_https": true
+        }
+      },
+      {
+        "id": "domain_expiry",
+        "status": "ok",
+        "facts": {
+          "domain": "badssl.com",
+          "source": "rdap",
+          "found": true,
+          "expires_at": "2027-04-08",
+          "days_left": 156
+        }
+      },
+      {
+        "id": "page_response",
+        "status": "ok",
+        "facts": {
+          "http_status": 200,
+          "error_text_visible": false
+        }
+      },
+      {
+        "id": "site_software",
+        "status": "ok",
+        "facts": {
+          "wordpress_in_use": false,
+          "wordpress_version": null,
+          "php_version": null
+        }
+      },
+      {
+        "id": "search_settings",
+        "status": "ok",
+        "facts": {
+          "noindex": false,
+          "robots_blocks_top": null,
+          "title_present": true
+        }
+      },
+      {
+        "id": "mobile_view",
+        "status": "ok",
+        "facts": {
+          "viewport_present": true
+        }
+      },
+      {
+        "id": "mail_settings",
+        "status": "warn",
+        "facts": {
+          "mail_in_use": true,
+          "spf_records": 0,
+          "dmarc_present": false
+        }
+      },
+      {
+        "id": "contact_form",
+        "status": "ok",
+        "facts": {
+          "form_found": null
+        }
+      },
+      {
+        "id": "map_listing",
+        "status": "ok",
+        "facts": {
+          "listing_found": false,
+          "site_phones": []
+        }
+      }
+    ]
+  },
+  "requests": [
+    {
+      "to": "サーバー会社",
+      "subject": "ホームページの証明書とメール設定についてご確認のお願い",
+      "body": "いつも大変お世話になっております。〔お店の名前〕です。\n\n外部のチェックサービスでホームページの状態を調べたところ、気になる点がいくつか表示されました。外から調べた結果ですので、実際の状況をご確認いただけますと幸いです。\n\n■ SSL証明書について（対象：expired.badssl.com）\n・HTTPSでの接続自体はできる状態です\n・証明書の有効期限が 2015-04-12 と表示され、期限から4223日経過しています\n・検証時に「certificate has expired」というエラーが出ています\n・お客様のブラウザで警告が表示されている可能性があるため、証明書の状況をご確認のうえ、必要であれば更新をお願いできますでしょうか\n\n■ メールの送信ドメイン認証について（対象ドメイン：badssl.com）\n・このドメインでメールを使用しているように見受けられます\n・SPFレコードが見つかりませんでした（0件）\n・DMARCレコードも見つかりませんでした\n・送信したメールが迷惑メール扱いされないよう、設定の有無をご確認いただき、必要であればご対応をお願いできますでしょうか\n\nもし御社のご担当範囲ではない内容が含まれておりましたら、どちらに相談すればよいか教えていただけますと大変助かります。\n\nお忙しいところ恐れ入りますが、どうぞよろしくお願いいたします。\n\n〔お店の名前〕"
+    }
+  ],
+  "expires": "2015-04-12",
+  "domain": "expired.badssl.com"
+}

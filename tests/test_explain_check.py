@@ -1,6 +1,8 @@
 import unittest
 from types import SimpleNamespace
 
+import anthropic
+
 from shindan.explain import ExplainError, explain
 from shindan.explain_check import find_problems
 
@@ -98,6 +100,14 @@ class DateFormTest(unittest.TestCase):
         self.assertIn("店主向けの欄の日付の形: 2026-11-08", find_problems(bad, SCAN))
 
 
+NO_ISSUES = {"issues": []}
+
+
+class _ApiDown(anthropic.APIError):
+    def __init__(self):
+        pass
+
+
 class FakeClient:
     """用意した出力を順に返す。"""
 
@@ -122,6 +132,7 @@ class ExplainTest(unittest.TestCase):
         bad["summary"] = "あと99日です。"
         client = FakeClient([bad, good()])
         result = explain(SCAN, client=client)
+        self.assertEqual(len(client.calls), 2)  # 残り回数が無いのでレビューは呼ばない
         self.assertEqual(result["cards"][0]["status"], "critical")
         self.assertIn("調査結果に無い数字: 99", client.calls[1]["messages"][0]["content"])
 
@@ -130,6 +141,47 @@ class ExplainTest(unittest.TestCase):
         bad["summary"] = "あと99日です。"
         with self.assertRaises(ExplainError):
             explain(SCAN, client=FakeClient([bad, bad]))
+
+
+class ReviewFlowTest(unittest.TestCase):
+    def test_clean_review_needs_no_rewrite(self):
+        client = FakeClient([good(), NO_ISSUES])
+        self.assertEqual(explain(SCAN, client=client)["summary"], good()["summary"])
+        self.assertEqual(len(client.calls), 2)
+        self.assertEqual(client.calls[1]["model"], "claude-haiku-5-5")
+
+    def test_review_issue_goes_back_to_the_writer(self):
+        better = good()
+        better["summary"] = "直した文面です。"
+        issues = {"issues": [{"to": "ドメイン会社", "issue": "対象のドメインが書かれていません"}]}
+        client = FakeClient([good(), issues, better])
+        self.assertEqual(explain(SCAN, client=client)["summary"], "直した文面です。")
+        self.assertIn("対象のドメインが書かれていません", client.calls[2]["messages"][0]["content"])
+
+    def test_failed_rewrite_keeps_the_version_that_passed(self):
+        bad = good()
+        bad["summary"] = "あと99日です。"
+        issues = {"issues": [{"to": "ドメイン会社", "issue": "値がありません"}]}
+        client = FakeClient([good(), issues, bad])
+        self.assertEqual(explain(SCAN, client=client)["summary"], good()["summary"])
+
+    def test_review_api_failure_still_returns_the_letter(self):
+        client = FakeClient([good()])
+        real = client._create
+
+        def create(**kwargs):
+            if kwargs.get("model") == "claude-haiku-5-5":
+                raise _ApiDown()
+            return real(**kwargs)
+
+        client.beta.messages.create = create
+        self.assertEqual(explain(SCAN, client=client)["summary"], good()["summary"])
+
+    def test_no_letters_means_no_review(self):
+        scan = {"host": "shop.example.co.jp", "checks": [SCAN["checks"][0]]}
+        client = FakeClient([{"summary": "今回調べた範囲では問題ありません。", "cards": [], "requests": []}])
+        explain(scan, client=client)
+        self.assertEqual(len(client.calls), 1)
 
 
 if __name__ == "__main__":

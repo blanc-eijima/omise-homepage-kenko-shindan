@@ -6,6 +6,7 @@ import anthropic
 
 from shindan.config import read_secret
 from shindan.explain_check import find_problems
+from shindan.review import review_requests
 
 MODEL = "claude-opus-5-5"
 MAX_ATTEMPTS = 2
@@ -131,13 +132,26 @@ def explain(scan: dict, client=None) -> dict:
             raise ExplainError("APIキーがありません（.env の ANTHROPIC_API_KEY）")
         client = anthropic.Anthropic(api_key=key)
     problems: list[str] = []
-    for _ in range(MAX_ATTEMPTS):
+    passed = None  # 検査を通った最新の文面。書き直しに失敗しても、これを店主へ届ける
+    for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             explanation = _request(client, scan, problems)
         except anthropic.APIError as exc:
+            if passed:
+                break
             raise ExplainError(f"Claude APIの呼び出しに失敗しました: {exc}") from exc
         problems = find_problems(explanation, scan)
+        if problems:
+            print("検査で差し戻し: " + " / ".join(problems), file=sys.stderr)
+            continue
+        passed = explanation
+        # 書き直す回数が残っているときだけ読み直す（直せない指摘に費用をかけない）。
+        if attempt == MAX_ATTEMPTS or not explanation["requests"]:
+            break
+        problems = review_requests(client, scan, explanation["requests"])
         if not problems:
-            return _attach_status(explanation, scan)
-        print("検査で差し戻し: " + " / ".join(problems), file=sys.stderr)
-    raise ExplainError("検査を通りませんでした: " + " / ".join(problems))
+            break
+        print("レビューで差し戻し: " + " / ".join(problems), file=sys.stderr)
+    if passed is None:
+        raise ExplainError("検査を通りませんでした: " + " / ".join(problems))
+    return _attach_status(passed, scan)

@@ -1,16 +1,14 @@
 """調査結果を、店主向けの説明と依頼文にする。事実は調査結果からだけ取る。"""
 import json
-import os
-from pathlib import Path
 
 import anthropic
 
+from shindan.config import read_secret
 from shindan.explain_check import find_problems
 
 MODEL = "claude-opus-5-5"
 MAX_ATTEMPTS = 2
 SEVERITY_ORDER = {"critical": 0, "warn": 1, "unknown": 2}
-ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 SYSTEM_PROMPT = """\
 あなたは、町の小さなお店のホームページを長年保守してきた担当者です。
@@ -87,18 +85,6 @@ class ExplainError(RuntimeError):
     """検査を通る読み解きを得られなかった。"""
 
 
-def _api_key() -> str | None:
-    """.env から読む。対話席の Claude Code を巻き込むので環境変数へは書き戻さない。"""
-    if key := os.environ.get("ANTHROPIC_API_KEY"):
-        return key
-    if ENV_FILE.exists():
-        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
-            name, _, value = line.partition("=")
-            if name.strip() == "ANTHROPIC_API_KEY":
-                return value.strip().strip("\"'")
-    return None
-
-
 def _user_message(scan: dict, problems: list[str]) -> str:
     text = "調査結果:\n" + json.dumps(scan, ensure_ascii=False, indent=2)
     if problems:
@@ -136,7 +122,7 @@ def _attach_status(explanation: dict, scan: dict) -> dict:
 
 def explain(scan: dict, client=None) -> dict:
     if client is None:
-        key = _api_key()
+        key = read_secret("ANTHROPIC_API_KEY")
         if not key:
             raise ExplainError("APIキーがありません（.env の ANTHROPIC_API_KEY）")
         client = anthropic.Anthropic(api_key=key)

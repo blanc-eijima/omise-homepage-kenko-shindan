@@ -114,6 +114,14 @@ class SiteSoftwareTest(unittest.TestCase):
         )
         self.assertEqual(self.run_check(page)["status"], "ok")
 
+    def test_version_newer_than_list_is_ok(self):
+        result = self.run_check(make_page('<meta name="generator" content="WordPress 7.2">'))
+        self.assertEqual(result["status"], "ok")
+
+    def test_version_missing_from_list_but_old_is_unknown(self):
+        result = self.run_check(make_page('<meta name="generator" content="WordPress 5.0">'))
+        self.assertEqual(result["status"], "unknown")
+
     def test_hidden_version_is_ok_not_a_finding(self):
         result = self.run_check(make_page('<link href="/wp-content/x.css">'))
         self.assertEqual(result["status"], "ok")

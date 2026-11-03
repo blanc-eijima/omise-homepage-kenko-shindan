@@ -49,9 +49,16 @@ def _version_key(version: str) -> tuple[int, ...]:
     return tuple(int(part) for part in version.split("."))
 
 
+def _newer_than_list(version: str, cycles: list[dict]) -> bool:
+    """出たばかりの版は一覧に載っていない。古いと誤解しないよう見分ける。"""
+    return all(_version_key(c["cycle"]) < _version_key(version) for c in cycles)
+
+
 def judge_wordpress(version: str, cycles: list[dict], today: date) -> dict | None:
     cycle = _cycle_of(version, cycles)
     if cycle is None:
+        if _newer_than_list(version, cycles):
+            return {"wordpress_support_ended": False, "wordpress_behind_in_line": False}
         return None
     ended, ended_on = _ended(cycle, today)
     latest = cycle.get("latest")
@@ -66,6 +73,8 @@ def judge_wordpress(version: str, cycles: list[dict], today: date) -> dict | Non
 def judge_php(version: str, cycles: list[dict], today: date) -> dict | None:
     cycle = _cycle_of(version, cycles)
     if cycle is None:
+        if _newer_than_list(version, cycles):
+            return {"php_support_ended": False}
         return None
     ended, ended_on = _ended(cycle, today)
     return {"php_support_ended": ended, "php_support_ended_on": ended_on}

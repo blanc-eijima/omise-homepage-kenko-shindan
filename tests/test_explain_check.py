@@ -109,7 +109,11 @@ class FakeClient:
     def _create(self, **kwargs):
         self.calls.append(kwargs)
         text = __import__("json").dumps(next(self.outputs), ensure_ascii=False)
-        return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=text)])
+        return SimpleNamespace(
+            stop_reason="end_turn",
+            usage=SimpleNamespace(input_tokens=1, output_tokens=1),
+            content=[SimpleNamespace(type="text", text=text)],
+        )
 
 
 class ExplainTest(unittest.TestCase):

@@ -1,0 +1,26 @@
+app = "omise-kenko-shindan"
+primary_region = "nrt"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # 止めると回数の記録（メモリ）が消えるので、メモリごと保つ suspend にする。
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 6
+    hard_limit = 10
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

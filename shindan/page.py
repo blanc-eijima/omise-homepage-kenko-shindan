@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit
 
-from shindan.guard import UnsafeTarget, parse_target
+from shindan.guard import PublicHTTPConnection, PublicHTTPSConnection, UnsafeTarget, parse_target
 
 TIMEOUT = 10
 MAX_BYTES = 2_000_000
@@ -27,12 +27,27 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+class _PublicHTTP(urllib.request.HTTPHandler):
+    def http_open(self, req):
+        return self.do_open(PublicHTTPConnection, req)
+
+
+class _PublicHTTPS(urllib.request.HTTPSHandler):
+    def https_open(self, req):
+        return self.do_open(PublicHTTPSConnection, req, context=self._context)
+
+
 def _open(url: str) -> Fetched:
     """転送は追わずに1回だけ読む。証明書切れのサイトも中身は読めるよう検証しない。"""
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
-    opener = urllib.request.build_opener(_NoRedirect, urllib.request.HTTPSHandler(context=context))
+    opener = urllib.request.build_opener(
+        _NoRedirect,
+        urllib.request.ProxyHandler({}),  # プロキシ経由だと接続先の検査を素通りする
+        _PublicHTTP,
+        _PublicHTTPS(context=context),
+    )
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
         response = opener.open(request, timeout=TIMEOUT)

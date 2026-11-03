@@ -1,11 +1,11 @@
 """SSL証明書の期限と、http から https への転送を調べる。"""
-import http.client
-import socket
 import ssl
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
 from cryptography import x509
+
+from shindan.guard import PublicHTTPConnection, connect_public
 
 TIMEOUT = 10
 # Let's Encrypt などは期限の約30日前に自動更新する＝残り30日は正常の範囲。
@@ -19,7 +19,7 @@ def _read_certificate(host: str) -> bytes:
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
-    with socket.create_connection((host, 443), timeout=TIMEOUT) as sock:
+    with connect_public((host, 443), TIMEOUT) as sock:
         with ctx.wrap_socket(sock, server_hostname=host) as tls:
             return tls.getpeercert(binary_form=True)
 
@@ -28,7 +28,7 @@ def _verify_error(host: str) -> str | None:
     """通常のブラウザと同じ検証をかけ、失敗の理由を返す。"""
     ctx = ssl.create_default_context()
     try:
-        with socket.create_connection((host, 443), timeout=TIMEOUT) as sock:
+        with connect_public((host, 443), TIMEOUT) as sock:
             with ctx.wrap_socket(sock, server_hostname=host):
                 return None
     except ssl.SSLCertVerificationError as exc:
@@ -82,7 +82,7 @@ def check_certificate(host: str, now: datetime | None = None) -> dict:
 
 
 def _read_http_response(host: str) -> tuple[int, str]:
-    conn = http.client.HTTPConnection(host, 80, timeout=TIMEOUT)
+    conn = PublicHTTPConnection(host, 80, timeout=TIMEOUT)
     try:
         conn.request("GET", "/", headers={"User-Agent": "omise-kenko-shindan/0.1"})
         response = conn.getresponse()

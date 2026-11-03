@@ -1,5 +1,6 @@
 """調査結果を、店主向けの説明と依頼文にする。事実は調査結果からだけ取る。"""
 import json
+import sys
 
 import anthropic
 
@@ -107,6 +108,8 @@ def _request(client, scan: dict, problems: list[str]) -> dict:
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": _user_message(scan, problems)}],
     )
+    usage = response.usage
+    print(f"Claudeの使用量: 入力{usage.input_tokens} 出力{usage.output_tokens}", file=sys.stderr)
     if response.stop_reason != "end_turn":
         raise ExplainError(f"読み解きが途中で止まりました: {response.stop_reason}")
     return json.loads(next(b.text for b in response.content if b.type == "text"))

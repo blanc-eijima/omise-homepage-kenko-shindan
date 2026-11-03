@@ -1,2 +1,2 @@
-cryptography>=42
-anthropic>=1
+cryptography==50.0.2
+anthropic==2.4.0

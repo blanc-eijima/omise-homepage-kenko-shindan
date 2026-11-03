@@ -8,6 +8,7 @@ from unittest import mock
 from shindan import web
 from shindan.explain import ExplainError
 from shindan.guard import UnsafeTarget
+from shindan.limits import PER_IP_LIMIT, PER_IP_MESSAGE
 
 REPORT = {"host": "shop.example.jp", "checks": []}
 
@@ -23,6 +24,9 @@ class WebTest(unittest.TestCase):
     def tearDownClass(cls):
         cls.server.shutdown()
         cls.server.server_close()
+
+    def setUp(self):
+        web._limits = web.UsageLimits()
 
     def post(self, path, payload, content_type="application/json"):
         request = urllib.request.Request(
@@ -58,6 +62,42 @@ class WebTest(unittest.TestCase):
         self.assertEqual(status, 200)
         explain.assert_called_once_with(REPORT)
         self.assertEqual(data["explanation"]["summary"], "ok")
+
+    def test_explain_runs_only_once_per_scan(self):
+        with mock.patch.object(web, "scan", return_value=REPORT):
+            _, scanned = self.post("/api/scan", {"url": "https://shop.example.jp"})
+        with mock.patch.object(web, "explain", return_value={"summary": "ok"}) as explain:
+            self.assertEqual(self.post("/api/explain", {"id": scanned["id"]})[0], 200)
+            self.assertEqual(self.post("/api/explain", {"id": scanned["id"]})[0], 404)
+        explain.assert_called_once()
+
+    def test_scan_over_the_limit_is_refused_without_scanning(self):
+        with mock.patch.object(web, "scan", return_value=REPORT) as scanned:
+            for _ in range(PER_IP_LIMIT):
+                self.assertEqual(self.post("/api/scan", {"url": "https://shop.example.jp"})[0], 200)
+            status, data = self.post("/api/scan", {"url": "https://shop.example.jp"})
+        self.assertEqual(status, 429)
+        self.assertEqual(data["error"], PER_IP_MESSAGE)
+        self.assertEqual(scanned.call_count, PER_IP_LIMIT)
+
+    def test_rejected_address_is_not_counted(self):
+        with mock.patch.object(web, "scan", side_effect=UnsafeTarget("x")):
+            self.post("/api/scan", {"url": "http://127.0.0.1/"})
+        self.assertEqual(web._limits.used_today(), 0)
+
+    def test_fly_client_ip_header_is_ignored_outside_fly(self):
+        with mock.patch.object(web, "scan", return_value=REPORT):
+            for i in range(PER_IP_LIMIT + 1):
+                request = urllib.request.Request(
+                    self.base + "/api/scan",
+                    data=json.dumps({"url": "https://shop.example.jp"}).encode("utf-8"),
+                    headers={"Content-Type": "application/json", "Fly-Client-IP": f"203.0.113.{i}"},
+                )
+                try:
+                    status = urllib.request.urlopen(request).status
+                except urllib.error.HTTPError as exc:
+                    status = exc.code
+        self.assertEqual(status, 429)
 
     def test_unknown_scan_id_is_404(self):
         self.assertEqual(self.post("/api/explain", {"id": "none"})[0], 404)

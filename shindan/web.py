@@ -1,30 +1,65 @@
 """画面。調査と読み解きを分け、調査結果を先に見せる。"""
 import json
+import os
 import secrets
 import sys
+import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from shindan.cli import scan
 from shindan.explain import ExplainError, explain
 from shindan.guard import UnsafeTarget
+from shindan.limits import DAILY_LIMIT, UsageLimits
 
-HOST = "127.0.0.1"
-PORT = 8765
+# 既定はこのPCの中だけ。公開先では Dockerfile が環境変数で指定する。
+HOST = os.environ.get("HOST", "127.0.0.1")
+PORT = int(os.environ.get("PORT", "8765"))
 MAX_BODY = 4096
+SCAN_TTL = 3600
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Content-Security-Policy": (
+        "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
+        "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    ),
+}
 INDEX_HTML = Path(__file__).parent / "static" / "index.html"
 
 # 読み解きには、サーバーが自分で調べた結果だけを渡す（画面から事実を差し込ませない）。
-# ponytail: メモリに置くだけで消さない。ローカル動作専用。一般公開するなら期限と上限、
-# 利用回数の制限、DNSリバインディング対策（guard.py のコメント参照）が要る。
-_scans: dict[str, dict] = {}
+# 調査結果1件につき読み解きは1回だけ。同じ番号で何度も呼ばれてClaudeの費用が増えるのを防ぐ。
+_scans: dict[str, tuple[float, dict]] = {}
+_scans_lock = threading.Lock()
+_limits = UsageLimits()
+
+
+def _keep_scan(report: dict) -> str:
+    scan_id = secrets.token_urlsafe(16)
+    now = time.time()
+    with _scans_lock:
+        for old_id in [i for i, (kept_at, _) in _scans.items() if now - kept_at > SCAN_TTL]:
+            del _scans[old_id]
+        _scans[scan_id] = (now, report)
+    return scan_id
+
+
+def _take_scan(scan_id: str) -> dict | None:
+    with _scans_lock:
+        kept = _scans.pop(scan_id, None)
+    return kept[1] if kept else None
 
 
 class Handler(BaseHTTPRequestHandler):
+    timeout = 60  # 途中で黙る接続に居座られない
+
     def _send(self, status: int, body: bytes, content_type: str) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
+        for name, value in SECURITY_HEADERS.items():
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 
@@ -67,23 +102,33 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send_json(404, {"error": "ページがありません"})
 
+    def _client_ip(self) -> str:
+        """Fly.io上では、前段が付ける接続元だけを信じる（他の環境では偽装できるので見ない）。"""
+        if os.environ.get("FLY_APP_NAME"):
+            return self.headers.get("Fly-Client-IP") or self.client_address[0]
+        return self.client_address[0]
+
     def _scan(self, payload: dict) -> None:
         url = str(payload.get("url") or "").strip()
         name = str(payload.get("name") or "").strip() or None
         if not url:
             self._send_json(400, {"error": "ホームページのアドレスを入れてください"})
             return
+        ip = self._client_ip()
+        if refusal := _limits.take(ip):
+            self._send_json(429, {"error": refusal})
+            return
         try:
             report = scan(url, name)
         except UnsafeTarget:
+            _limits.give_back(ip)
             self._send_json(400, {"error": "このアドレスは調べられません。入力をご確認ください"})
             return
-        scan_id = secrets.token_urlsafe(16)
-        _scans[scan_id] = report
-        self._send_json(200, {"id": scan_id, "report": report})
+        print(f"診断 本日{_limits.used_today()}/{DAILY_LIMIT}件", file=sys.stderr)
+        self._send_json(200, {"id": _keep_scan(report), "report": report})
 
     def _explain(self, payload: dict) -> None:
-        report = _scans.get(str(payload.get("id")))
+        report = _take_scan(str(payload.get("id")))
         if report is None:
             self._send_json(404, {"error": "調査結果が見つかりません。もう一度診断してください"})
             return

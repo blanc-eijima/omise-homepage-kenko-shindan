@@ -109,5 +109,17 @@ class MapTest(unittest.TestCase):
         self.assertNotIn("secret", str(result))
 
 
+class DemoListingTest(unittest.TestCase):
+    def test_demo_host_says_so_and_skips_the_real_search(self):
+        host = "hidamari-shotengai-demo.netlify.app"
+        page = make_page('<a href="tel:03-0000-1234">', f"https://{host}/")
+        with mock.patch.object(map_listing, "_search") as search:
+            result = map_listing.check_map_listing(page, host, "key")
+        search.assert_not_called()
+        self.assertEqual(result["status"], "warn")
+        self.assertTrue(result["facts"]["phones_differ"])
+        self.assertTrue(result["facts"]["demo_data"])
+
+
 if __name__ == "__main__":
     unittest.main()

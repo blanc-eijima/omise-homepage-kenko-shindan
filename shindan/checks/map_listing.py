@@ -17,6 +17,8 @@ _PHONE = re.compile(r"(?<![\d-])(0\d{0,4}[-‐ー()（） ]{0,2}\d{1,4}[-‐ー(
 _TEL_LINK = re.compile(r'href=["\']tel:([^"\']+)', re.IGNORECASE)
 _TAG = re.compile(r"<(script|style)\b.*?</\1>|<[^>]+>", re.IGNORECASE | re.DOTALL)
 PHONE_DIGITS = (10, 11)
+# 架空のお店はGoogleマップに載らない。デモの照合だけ、この登録と比べて画面に架空と明記する。
+DEMO_LISTINGS = {"hidamari-shotengai-demo.netlify.app": {"nationalPhoneNumber": "03-0000-5678"}}
 
 
 def normalize_phone(text: str) -> str:
@@ -81,6 +83,9 @@ def judge_listing(site_phones: list[str], listing: dict | None) -> dict:
 def check_map_listing(page: Fetched | None, host: str, key: str, name: str | None = None) -> dict:
     if page is None:
         return {"id": "map_listing", "status": "unknown", "facts": {"page_read": False}}
+    if host in DEMO_LISTINGS:
+        result = judge_listing(find_phones(page.body), DEMO_LISTINGS[host])
+        return {**result, "facts": {**result["facts"], "demo_data": True}}
     query = name or read_head(page.body)[1] or host
     try:
         listing = pick_own_listing(_search(query, key), host)

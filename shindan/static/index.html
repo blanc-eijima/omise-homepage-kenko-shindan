@@ -148,6 +148,8 @@ const STATES = {
   ok: { text: "指摘なし", order: 3 },
 };
 const $ = (id) => document.getElementById(id);
+let demoChecks = new Set();
+const labelOf = (id) => (LABELS[id] || id) + (demoChecks.has(id) ? "（デモ用の架空データ）" : "");
 
 function el(tag, text, className) {
   const node = document.createElement(tag);
@@ -168,6 +170,7 @@ async function post(path, payload) {
 }
 
 function showReport(report) {
+  demoChecks = new Set(report.checks.filter((check) => check.facts.demo_data).map((check) => check.id));
   $("target").textContent = "調べたサイト: " + report.host;
   const checks = [...report.checks].sort((a, b) => STATES[a.status].order - STATES[b.status].order);
   const counts = $("counts");
@@ -180,7 +183,7 @@ function showReport(report) {
   list.replaceChildren();
   for (const check of checks) {
     const row = el("li");
-    row.append(el("span", LABELS[check.id] || check.id));
+    row.append(el("span", labelOf(check.id)));
     row.append(el("span", STATES[check.status].text, "state count-" + check.status));
     list.append(row);
   }
@@ -191,7 +194,7 @@ function makeCard(card) {
   const box = el("article", undefined, "card " + card.status);
   const title = el("h3");
   title.append(el("span", STATES[card.status].text, "badge"));
-  title.append(LABELS[card.check_id] || card.check_id);
+  title.append(labelOf(card.check_id));
   box.append(title);
   const details = el("dl");
   const rows = [

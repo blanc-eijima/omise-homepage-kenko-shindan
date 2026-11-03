@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="WordPress 5.8.1">
+<meta name="robots" content="noindex">
+<title>洋菓子 ひだまり堂（架空のお店）</title>
+<link rel="stylesheet" href="/wp-content/themes/hidamari/style.css">
+<style>
+body { margin: 0; background: #fff; color: #333; font-family: "Hiragino Sans", Meiryo, sans-serif; line-height: 1.8; }
+.demo { background: #1f3a5f; color: #fff; padding: 10px 16px; text-align: center; font-weight: 700; }
+.php { margin: 0; padding: 8px 16px; font-family: serif; font-size: 14px; overflow-wrap: anywhere; }
+header { background: #7a4a24; color: #fff; padding: 20px 16px; }
+h1 { margin: 0; font-size: 26px; }
+main { max-width: 680px; margin: 0 auto; padding: 8px 16px 32px; }
+h2 { border-bottom: 2px solid #7a4a24; font-size: 18px; }
+label { display: block; margin-top: 12px; }
+input, textarea { width: 100%; box-sizing: border-box; padding: 8px; font-size: 16px; border: 1px solid #999; }
+button { margin-top: 12px; padding: 8px 24px; font-size: 16px; }
+</style>
+</head>
+<body>
+<div class="demo">これは診断のデモ用に作った架空のお店のサイトです。実在しません。</div>
+<p class="php"><b>Warning</b>: Undefined variable $shop_hours in /home/hidamari/public_html/wp-content/themes/hidamari/header.php on line <b>42</b></p>
+<header><h1>洋菓子 ひだまり堂</h1></header>
+<main>
+<h2>お店のご案内</h2>
+<p>架空県ひだまり市の商店街にある、小さな洋菓子店です。</p>
+<p>電話 <a href="tel:03-0000-1234">03-0000-1234</a><br>定休日 水曜日</p>
+<h2>お問い合わせ</h2>
+<form method="post" action="http://hidamari-shotengai-demo.netlify.app/contact/send" onsubmit="event.preventDefault(); this.querySelector('output').textContent = 'デモのため、送信はされません。';">
+<label>お名前 <input name="name"></label>
+<label>お問い合わせ内容 <textarea name="message" rows="4"></textarea></label>
+<button>送信する</button>
+<p><output></output></p>
+</form>
+</main>
+</body>
+</html>

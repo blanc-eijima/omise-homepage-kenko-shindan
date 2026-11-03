@@ -35,6 +35,8 @@ python -m venv .venv
 
 画面で使うときは `.venv\Scripts\python -m shindan.web` を実行し、`http://127.0.0.1:8765/` を開きます。
 
+公開版は https://omise-kenko-shindan.fly.dev/ です。
+
 `--explain` と画面の説明文には `.env` の `ANTHROPIC_API_KEY` を使います。
 
 ## 調べ方の約束
@@ -42,6 +44,16 @@ python -m venv .venv
 - 外から誰でも見られる情報だけを読みます。フォームの送信、ログイン画面への接触、脆弱性の探りはしません
 - 社内ネットワークなど、公開されていないアドレスは読みに行きません
 - 読み解きの文章は、調査結果に含まれる事実だけから作ります
+- 調査結果は説明文を作るためにAnthropic社のClaudeへ送ります。サイト側では保存しません
+- 公開版は全体で1日30回、同じ接続元から1時間に5回までです
+
+## 公開の手順
+
+Fly.io（東京）で動かします。キーは `fly secrets` に入れ、`.env` は `.dockerignore` でイメージから外しています。
+
+```
+fly deploy --remote-only --ha=false
+```
 
 ## テスト
 

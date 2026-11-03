@@ -12,13 +12,25 @@
 
 ## 現在できること
 
-URLを渡すと、SSL証明書の状態、httpからhttpsへの転送、ドメインの期限を調べてJSONで出します。
+URLを渡すと、次の項目を調べてJSONで出します。
+
+- SSL証明書の期限と、httpからhttpsへの転送
+- ドメインの期限（.jp を含む）
+- トップページが開くか、画面にエラーの文字が出ていないか
+- WordPressとPHPの古さ（外に版番号が出ている場合だけ）
+- 検索に出ない設定（noindex・robots.txt）と title の有無
+- スマホ向けの設定（viewport）
+
+`--explain` を付けると、Claude が調査結果を読み、急ぐ順の説明と依頼先ごとの依頼文を書きます。出力は調査結果と突合し、調査結果に無い数字・ドメイン名・項目を書いていたら差し戻します。
 
 ```
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 .venv\Scripts\python -m shindan.cli https://example.com
+.venv\Scripts\python -m shindan.cli --explain https://example.com
 ```
+
+`--explain` には `.env` の `ANTHROPIC_API_KEY` を使います。
 
 ## 調べ方の約束
 

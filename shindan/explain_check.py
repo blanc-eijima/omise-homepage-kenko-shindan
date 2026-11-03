@@ -21,6 +21,8 @@ _NUMBER = re.compile(r"\d+")
 # 「2つ」「3件」は文章の数え方で、調査の事実ではない。「3日」「3000円」は止める。
 _COUNT = re.compile(r"\d+(?=つ|点|件|項目|通|か所|箇所)")
 _DOMAIN = re.compile(r"[a-z0-9-]+(?:\.[a-z0-9-]+)+")
+# robots.txt や wp-config.php はファイルの名前で、ドメイン名ではない。
+_FILE_NAME = (".txt", ".php", ".html", ".htm", ".xml", ".css", ".js")
 
 
 def _normalize(text: str) -> str:
@@ -32,7 +34,10 @@ def _numbers(text: str) -> set[int]:
 
 
 def _domains(text: str) -> set[str]:
-    return {d for d in _DOMAIN.findall(_normalize(text)) if not d[0].isdigit()}
+    return {
+        d for d in _DOMAIN.findall(_normalize(text))
+        if not d[0].isdigit() and not d.endswith(_FILE_NAME)
+    }
 
 
 def _all_text(explanation: dict) -> str:

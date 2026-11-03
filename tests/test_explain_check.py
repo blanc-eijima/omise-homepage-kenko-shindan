@@ -79,6 +79,16 @@ class FindProblemsTest(unittest.TestCase):
         self.assertEqual(find_problems(fine, SCAN), [])
 
 
+class FileNameTest(unittest.TestCase):
+    def test_file_names_are_not_domains(self):
+        fine = good()
+        fine["summary"] = "robots.txt と wp-config.php を確認します。"
+        self.assertFalse([p for p in find_problems(fine, SCAN) if "ドメイン名" in p])
+        bad = good()
+        bad["summary"] = "other-shop.com を確認します。"
+        self.assertIn("調査結果に無いドメイン名: other-shop.com", find_problems(bad, SCAN))
+
+
 class CountWordsTest(unittest.TestCase):
     def test_counting_words_pass_but_days_and_money_do_not(self):
         fine = good()

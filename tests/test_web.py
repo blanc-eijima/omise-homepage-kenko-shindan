@@ -1,5 +1,6 @@
 import json
 import threading
+import time
 import unittest
 import urllib.error
 import urllib.request
@@ -98,6 +99,27 @@ class WebTest(unittest.TestCase):
                 except urllib.error.HTTPError as exc:
                     status = exc.code
         self.assertEqual(status, 429)
+
+    def test_long_work_keeps_connection_with_blanks_then_returns_json(self):
+        def slow(_):
+            time.sleep(0.3)
+            raise ExplainError("internal detail")
+
+        with mock.patch.object(web, "scan", return_value=REPORT):
+            _, scanned = self.post("/api/scan", {"url": "https://shop.example.jp"})
+        with mock.patch.object(web, "HEARTBEAT", 0.05), mock.patch.object(web, "explain", side_effect=slow):
+            with mock.patch("sys.stderr"):
+                request = urllib.request.Request(
+                    self.base + "/api/explain",
+                    data=json.dumps({"id": scanned["id"]}).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                )
+                with urllib.request.urlopen(request) as response:
+                    raw = response.read().decode("utf-8")
+        self.assertEqual(response.status, 200)
+        self.assertTrue(raw.startswith(" "))
+        self.assertIn("説明文を作れませんでした", json.loads(raw)["error"])
+        self.assertNotIn("internal", raw)
 
     def test_unknown_scan_id_is_404(self):
         self.assertEqual(self.post("/api/explain", {"id": "none"})[0], 404)

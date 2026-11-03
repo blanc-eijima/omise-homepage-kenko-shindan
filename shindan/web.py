@@ -18,6 +18,7 @@ HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8765"))
 MAX_BODY = 4096
 SCAN_TTL = 3600
+HEARTBEAT = 20  # 秒。前段のプロキシは無通信が続く接続を切る
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
@@ -30,6 +31,7 @@ INDEX_HTML = Path(__file__).parent / "static" / "index.html"
 
 # 読み解きには、サーバーが自分で調べた結果だけを渡す（画面から事実を差し込ませない）。
 # 調査結果1件につき読み解きは1回だけ。同じ番号で何度も呼ばれてClaudeの費用が増えるのを防ぐ。
+FAILED = (500, {"error": "うまく調べられませんでした。もう一度お試しください"})
 _scans: dict[str, tuple[float, dict]] = {}
 _scans_lock = threading.Lock()
 _limits = UsageLimits()
@@ -66,6 +68,30 @@ class Handler(BaseHTTPRequestHandler):
     def _send_json(self, status: int, payload: dict) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self._send(status, body, "application/json; charset=utf-8")
+
+    def _send_slow(self, work) -> None:
+        """すぐ終われば普通に返す。長引くなら先に200を返し、終わるまで空白を送り続ける。
+        JSONの前の空白は無視されるので、画面は本文の error で失敗を判断する。"""
+        box: dict = {}
+        thread = threading.Thread(target=lambda: box.update(result=work()), daemon=True)
+        thread.start()
+        thread.join(HEARTBEAT)
+        if not thread.is_alive():
+            self._send_json(*box.get("result", FAILED))
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        for name, value in SECURITY_HEADERS.items():
+            self.send_header(name, value)
+        self.end_headers()
+        try:
+            while thread.is_alive():
+                self.wfile.write(b" ")
+                thread.join(HEARTBEAT)
+            _, payload = box.get("result", FAILED)
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+        except OSError:
+            pass  # 相手が先に閉じた
 
     def _read_json(self) -> dict | None:
         """他のサイトから勝手に呼ばれないよう、JSON以外は受けない。"""
@@ -118,25 +144,32 @@ class Handler(BaseHTTPRequestHandler):
         if refusal := _limits.take(ip):
             self._send_json(429, {"error": refusal})
             return
-        try:
-            report = scan(url, name)
-        except UnsafeTarget:
-            _limits.give_back(ip)
-            self._send_json(400, {"error": "このアドレスは調べられません。入力をご確認ください"})
-            return
-        print(f"診断 本日{_limits.used_today()}/{DAILY_LIMIT}件", file=sys.stderr)
-        self._send_json(200, {"id": _keep_scan(report), "report": report})
+
+        def work() -> tuple[int, dict]:
+            try:
+                report = scan(url, name)
+            except UnsafeTarget:
+                _limits.give_back(ip)
+                return 400, {"error": "このアドレスは調べられません。入力をご確認ください"}
+            print(f"診断 本日{_limits.used_today()}/{DAILY_LIMIT}件", file=sys.stderr)
+            return 200, {"id": _keep_scan(report), "report": report}
+
+        self._send_slow(work)
 
     def _explain(self, payload: dict) -> None:
         report = _take_scan(str(payload.get("id")))
         if report is None:
             self._send_json(404, {"error": "調査結果が見つかりません。もう一度診断してください"})
             return
-        try:
-            self._send_json(200, {"explanation": explain(report)})
-        except ExplainError as exc:
-            print(f"読み解きの失敗: {exc}", file=sys.stderr)
-            self._send_json(502, {"error": "説明文を作れませんでした。調査結果だけ表示しています"})
+
+        def work() -> tuple[int, dict]:
+            try:
+                return 200, {"explanation": explain(report)}
+            except ExplainError as exc:
+                print(f"読み解きの失敗: {exc}", file=sys.stderr)
+                return 502, {"error": "説明文を作れませんでした。調査結果だけ表示しています"}
+
+        self._send_slow(work)
 
     def log_message(self, format, *args):
         pass

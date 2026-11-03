@@ -138,4 +138,5 @@ def explain(scan: dict, client=None) -> dict:
         problems = find_problems(explanation, scan)
         if not problems:
             return _attach_status(explanation, scan)
+        print("検査で差し戻し: " + " / ".join(problems), file=sys.stderr)
     raise ExplainError("検査を通りませんでした: " + " / ".join(problems))

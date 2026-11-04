@@ -67,5 +67,6 @@
 - [x] 前回との比較（`shindan/watch_diff.py`）とテスト
 - [x] エージェント・環境・メモリストア・スケジュールの作成と読み出し（`shindan/watch.py`）
 - [x] blanc.to と架空のお店で通しで動かし、費用を測る
+- [x] スケジュール実行を手動で発火し、メモリストアが次の回へ引き継がれることの確認
 - [ ] セキュリティガイドとの照合（`/claude-api managed-agents-secure`）
 - [ ] README と動画の更新

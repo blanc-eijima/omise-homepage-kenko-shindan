@@ -19,7 +19,7 @@ def _query(name: str, record_type: str) -> list[str]:
         payload = json.load(response)
     if payload.get("Status") not in (NOERROR, NXDOMAIN):
         raise OSError(f"DNSの応答が異常です: {payload.get('Status')}")
-    wanted = {"MX": 15, "TXT": 16}[record_type]
+    wanted = {"NS": 2, "MX": 15, "TXT": 16}[record_type]
     return [a["data"] for a in payload.get("Answer", []) if a.get("type") == wanted]
 
 

@@ -15,6 +15,7 @@ from shindan.checks.page_checks import (
 )
 from shindan.checks.site_software import check_site_software
 from shindan.checks.ssl_cert import check_certificate, check_http_redirect
+from shindan.checks.vendor_hints import collect_hints
 from shindan.config import read_secret
 from shindan.guard import UnsafeTarget, parse_target
 from shindan.page import fetch_top
@@ -44,6 +45,7 @@ def scan(raw_url: str, shop_name: str | None = None) -> dict:
         "host": host,
         "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "checks": checks,
+        "hints": collect_hints(host, page),
     }
 
 

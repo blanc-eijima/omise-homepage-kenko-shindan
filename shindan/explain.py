@@ -12,6 +12,9 @@ MODEL = "claude-opus-5-5"
 MAX_ATTEMPTS = 2
 SEVERITY_ORDER = {"critical": 0, "warn": 1, "unknown": 2}
 
+SIGNATURE = "〔お店の名前〕"
+FEE_NOTE = "なお、費用がかかる場合は、作業の前にお知らせいただけますと幸いです。"
+
 SYSTEM_PROMPT = """\
 あなたは、町の小さなお店のホームページを長年保守してきた担当者です。
 読み手は、ホームページを業者に任せきりにしてきた店主です。パソコンに詳しくなく、業者の連絡先もうろ覚えかもしれません。
@@ -44,6 +47,7 @@ SYSTEM_PROMPT = """\
 - 外から調べた結果であり、実際の状況の確認をお願いする形にします。
 - 業者が確認できるよう、専門用語や調査結果の値を入れて構いません。
 - 差出人の名前は「〔お店の名前〕」と書き、店主が差し替えられるようにします。
+- 費用の確認の一文はプログラムが足すので、費用には触れません。
 - 調査結果に無い数字は書きません。番号付きの箇条書き（1. 2. 3.）にせず「・」を使い、今日の日付も書きません。
 - 宛先は、カードの who_to_ask に書いた依頼先だけにします。1枚のカードの内容が別の業者にも関わるときは、新しい宛先を増やさず、カードの依頼先への依頼文の中で確認をお願いします。
 - 問題がなければ requests は空にします。
@@ -93,7 +97,9 @@ class ExplainError(RuntimeError):
 
 
 def _user_message(scan: dict, problems: list[str]) -> str:
-    text = "調査結果:\n" + json.dumps(scan, ensure_ascii=False, indent=2)
+    # 手がかりは外れることがあるので、読み解きの事実には入れない。
+    facts = {key: value for key, value in scan.items() if key != "hints"}
+    text = "調査結果:\n" + json.dumps(facts, ensure_ascii=False, indent=2)
     if problems:
         text += "\n\n前回の出力は次の点で検査に落ちました。直して書き直してください:\n"
         text += "\n".join(f"- {p}" for p in problems)
@@ -126,7 +132,16 @@ def _attach_status(explanation: dict, scan: dict) -> dict:
     status = {c["id"]: c["status"] for c in scan["checks"]}
     cards = [{**card, "status": status[card["check_id"]]} for card in explanation["cards"]]
     cards.sort(key=lambda card: SEVERITY_ORDER[card["status"]])
-    return {**explanation, "cards": cards}
+    return {**explanation, "cards": cards, "requests": [_with_fee_note(r) for r in explanation["requests"]]}
+
+
+def _with_fee_note(request: dict) -> dict:
+    """予想外の請求を避ける一文。必ず入れたいので、Claudeに書かせず足す。"""
+    body = request["body"].rstrip()
+    signed = body.rfind(SIGNATURE)
+    if signed < 0:
+        return {**request, "body": f"{body}\n\n{FEE_NOTE}"}
+    return {**request, "body": f"{body[:signed].rstrip()}\n\n{FEE_NOTE}\n\n{body[signed:]}"}
 
 
 def explain(scan: dict, client=None) -> dict:

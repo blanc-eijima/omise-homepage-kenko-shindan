@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import anthropic
 
-from shindan.explain import ExplainError, explain
+from shindan.explain import FEE_NOTE, ExplainError, _user_message, _with_fee_note, explain
 from shindan.explain_check import find_problems
 
 SCAN = {
@@ -33,6 +33,22 @@ def good() -> dict:
         ],
         "requests": [{"to": "ドメイン会社", "subject": "更新のお願い", "body": "ご確認をお願いします。"}],
     }
+
+
+class FeeNoteTest(unittest.TestCase):
+    def test_goes_before_the_signature(self):
+        result = _with_fee_note({"to": "制作会社", "subject": "s", "body": "ご確認をお願いします。\n\n〔お店の名前〕\n"})
+        self.assertEqual(result["body"], f"ご確認をお願いします。\n\n{FEE_NOTE}\n\n〔お店の名前〕")
+
+    def test_without_signature_it_goes_last(self):
+        result = _with_fee_note({"to": "制作会社", "subject": "s", "body": "ご確認をお願いします。"})
+        self.assertTrue(result["body"].endswith(FEE_NOTE))
+
+
+class HintsAreNotFactsTest(unittest.TestCase):
+    def test_hints_do_not_reach_claude(self):
+        text = _user_message({**SCAN, "hints": {"credit": "かもめ工房"}}, [])
+        self.assertNotIn("かもめ工房", text)
 
 
 class FindProblemsTest(unittest.TestCase):

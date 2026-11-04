@@ -51,6 +51,7 @@ button.primary { background: var(--brand); color: #fff; }
 button:disabled { opacity: .55; cursor: wait; }
 #go { margin-top: 20px; }
 #progress { margin: 20px 0 0; font-weight: 700; color: var(--brand); }
+#bar { display: block; width: 100%; height: 14px; margin: 8px 0 0; accent-color: var(--brand); }
 #error { margin: 20px 0 0; font-weight: 700; color: var(--critical); }
 #summary { background: var(--panel); padding: 20px; border-radius: 6px; margin: 0; }
 .counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 0 0 16px; padding: 0; list-style: none; font-weight: 700; }
@@ -94,7 +95,7 @@ button:disabled { opacity: .55; cursor: wait; }
   @page { size: A4; margin: 12mm; }
   body { font-size: 10pt; line-height: 1.5; }
   .wrap { max-width: none; padding: 0; }
-  form, .actions, .copy, .operator, #progress, #error, .lead, .board { display: none !important; }
+  form, .actions, .copy, .operator, #progress, #bar, #error, .lead, .board { display: none !important; }
   #letters { display: block !important; break-before: page; }
   #letters:has(#letter-list:empty) { display: none !important; }
   h1 { font-size: 15pt; margin: 0; }
@@ -130,6 +131,7 @@ button:disabled { opacity: .55; cursor: wait; }
   </form>
 
   <p id="progress" role="status" hidden></p>
+  <progress id="bar" max="100" value="0" aria-label="診断の進み具合" hidden></progress>
   <p id="error" role="alert" hidden></p>
 
   <section id="result" hidden>
@@ -192,6 +194,8 @@ const STATES = {
   ok: { text: "指摘なし", order: 3 },
 };
 const CONSULT_URL = "https://www.blanc.to/toiawase/";
+const SCAN_SECONDS = 4;
+const EXPLAIN_SECONDS = 15;
 const $ = (id) => document.getElementById(id);
 let demoChecks = new Set();
 const labelOf = (id) => (LABELS[id] || id) + (demoChecks.has(id) ? "（デモ用の架空データ）" : "");
@@ -322,9 +326,21 @@ function reset() {
   $("show-letters").hidden = true;
 }
 
-function setProgress(text) {
+// サーバーから実際の進み具合は届かないので、目安として時間で進める。段階が終わるまで to には届かない。
+let barTimer;
+function setProgress(text, from = 0, to = 0, seconds = 1) {
+  clearInterval(barTimer);
   $("progress").textContent = text;
   $("progress").hidden = !text;
+  $("bar").hidden = !text;
+  if (!text) return;
+  const started = Date.now();
+  const tick = () => {
+    const elapsed = (Date.now() - started) / 1000;
+    $("bar").value = from + (to - from) * (1 - Math.exp(-elapsed / seconds));
+  };
+  tick();
+  barTimer = setInterval(tick, 200);
 }
 
 function showError(message) {
@@ -337,10 +353,10 @@ $("form").addEventListener("submit", async (event) => {
   reset();
   $("go").disabled = true;
   try {
-    setProgress("ホームページを調べています…");
+    setProgress("1/2 ホームページを調べています…", 0, 40, SCAN_SECONDS);
     const scanned = await post("/api/scan", { url: $("url").value, name: $("name").value });
     showReport(scanned.report);
-    setProgress("結果を分かりやすい言葉にしています（1分ほどかかることがあります）…");
+    setProgress("2/2 結果を分かりやすい言葉にしています（1分ほどかかることがあります）…", 40, 98, EXPLAIN_SECONDS);
     const explained = await post("/api/explain", { id: scanned.id });
     showExplanation(explained.explanation);
   } catch (error) {

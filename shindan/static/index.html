@@ -85,7 +85,7 @@ button:disabled { opacity: .55; cursor: wait; }
   @page { size: A4; margin: 12mm; }
   body { font-size: 10pt; line-height: 1.5; }
   .wrap { max-width: none; padding: 0; }
-  form, .actions, .copy, #progress, #error, .lead { display: none !important; }
+  form, .actions, .copy, .operator, #progress, #error, .lead { display: none !important; }
   #letters { display: block !important; break-before: page; }
   #letters:has(#letter-list:empty) { display: none !important; }
   h1 { font-size: 15pt; margin: 0; }
@@ -142,8 +142,12 @@ button:disabled { opacity: .55; cursor: wait; }
       <h2>業者へ送る依頼文</h2>
       <div id="letter-list"></div>
     </div>
-    <p class="note">外から見える範囲だけを調べた結果です。実際の状況は、依頼先にご確認ください。「指摘なし」は、今回の調べ方で問題が見つからなかったという意味で、安全を保証するものではありません。調査結果は、説明文を作るためにAnthropic社のClaudeへ送ります。このサイトに結果は残しません。</p>
+    <p class="note">外から見える範囲だけを調べた結果です。実際の状況は、依頼先にご確認ください。「指摘なし」は、今回の調べ方で問題が見つからなかったという意味で、安全を保証するものではありません。管理画面の中（追加の部品の更新など）は外から分かりません。調査結果は、説明文を作るためにAnthropic社のClaudeへ送ります。このサイトに結果は残しません。</p>
   </section>
+
+  <footer class="note operator">
+    無料でお使いいただけます。運営: 有限会社blanc（山口県下松市）。頼む先が分からないときは、<a href="https://www.blanc.to/toiawase/">blancへご相談</a>いただけます。
+  </footer>
 </main>
 
 <script>

@@ -17,6 +17,8 @@ TOPICS = {
 }
 
 _ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+# 外から見えない問題があっても、この一文で店主が確認をやめてしまう。
+_NO_NEED_TO_ASK = re.compile(r"(連絡|相談|依頼|確認).{0,8}(必要は?(あり|ござい)ません|不要)")
 _NUMBER = re.compile(r"\d+")
 # 「2つ」「3件」は文章の数え方で、調査の事実ではない。「3日」「3000円」は止める。
 _COUNT = re.compile(r"\d+(?=つ|点|件|項目|通|か所|箇所)")
@@ -109,6 +111,12 @@ def _check_jargon(explanation: dict) -> list[str]:
     return problems
 
 
+def _check_all_clear(explanation: dict) -> list[str]:
+    """外から見えた範囲の結果で、業者への確認まで不要と言い切らない。"""
+    found = _NO_NEED_TO_ASK.search(explanation["summary"])
+    return [f"確認を不要と言い切っている: {found.group()}"] if found else []
+
+
 def find_problems(explanation: dict, scan: dict) -> list[str]:
     return (
         _check_facts(explanation, scan)
@@ -116,4 +124,5 @@ def find_problems(explanation: dict, scan: dict) -> list[str]:
         + _check_cards(explanation, scan)
         + _check_requests(explanation)
         + _check_jargon(explanation)
+        + _check_all_clear(explanation)
     )

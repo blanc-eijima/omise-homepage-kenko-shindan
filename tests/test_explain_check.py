@@ -39,6 +39,15 @@ class FindProblemsTest(unittest.TestCase):
     def test_grounded_output_passes(self):
         self.assertEqual(find_problems(good(), SCAN), [])
 
+    def test_summary_must_not_say_no_need_to_ask(self):
+        for sentence in ("業者さんに連絡する必要はありません。", "ご相談は不要です。", "確認の必要はございません。"):
+            bad = good()
+            bad["summary"] = sentence
+            self.assertTrue(any("言い切" in p for p in find_problems(bad, SCAN)), sentence)
+        fine = good()
+        fine["summary"] = "今回調べた範囲では見つかりませんでした。気になるときは業者に確かめると安心です。"
+        self.assertEqual(find_problems(fine, SCAN), [])
+
     def test_invented_number_and_domain_fail(self):
         bad = good()
         bad["cards"][0]["what_to_do"] = "費用は30000円です。other-example.jp へ連絡を。"

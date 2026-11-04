@@ -168,7 +168,7 @@ button:disabled { opacity: .55; cursor: wait; }
   </section>
 
   <footer class="note operator">
-    無料でお使いいただけます。運営: 有限会社blanc（山口県下松市）。頼む先が分からないときは、<a href="https://www.blanc.to/toiawase/">blancへご相談</a>いただけます。
+    無料でお使いいただけます。運営: 有限会社blanc（山口県下松市）。頼む先が分からないときは、<a id="consult" href="https://www.blanc.to/toiawase/?type=shindan" target="_blank" rel="noopener">blancへご相談</a>いただけます。診断のあとに開くと、調べたサイトのアドレスと結果がお問い合わせ欄に入ります。送る前に直せます。
   </footer>
 </main>
 
@@ -191,6 +191,7 @@ const STATES = {
   unknown: { text: "調べられず", order: 2 },
   ok: { text: "指摘なし", order: 3 },
 };
+const CONSULT_URL = "https://www.blanc.to/toiawase/";
 const $ = (id) => document.getElementById(id);
 let demoChecks = new Set();
 const labelOf = (id) => (LABELS[id] || id) + (demoChecks.has(id) ? "（デモ用の架空データ）" : "");
@@ -211,6 +212,16 @@ async function post(path, payload) {
   const data = await response.json();
   if (!response.ok || data.error) throw new Error(data.error);
   return data;
+}
+
+// 問い合わせが来たときに内容が分かるよう、項目のidだけを渡す。文面は blanc.to 側で組み立てる。
+function consultUrl(report) {
+  const idsOf = (status) => report.checks.filter((check) => check.status === status).map((check) => check.id).join(",");
+  const params = new URLSearchParams({ type: "shindan", site: report.host });
+  for (const [key, status] of [["c", "critical"], ["w", "warn"], ["u", "unknown"]]) {
+    if (idsOf(status)) params.set(key, idsOf(status));
+  }
+  return CONSULT_URL + "?" + params;
 }
 
 function showReport(report) {
@@ -234,6 +245,7 @@ function showReport(report) {
     tile.append(el("b", STATES[byId.get(id).status].text));
     return tile;
   }));
+  $("consult").href = consultUrl(report);
   const list = $("checked");
   list.replaceChildren();
   for (const check of checks) {
@@ -300,6 +312,7 @@ function showExplanation(explanation) {
 }
 
 function reset() {
+  $("consult").href = CONSULT_URL + "?type=shindan";
   $("error").hidden = true;
   $("result").hidden = true;
   $("summary").hidden = true;

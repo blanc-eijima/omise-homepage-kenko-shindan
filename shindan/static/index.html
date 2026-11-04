@@ -82,16 +82,28 @@ button:disabled { opacity: .55; cursor: wait; }
 .note { color: var(--muted); font-size: 16px; margin-top: 32px; }
 [hidden] { display: none !important; }
 @media print {
-  body { font-size: 11pt; line-height: 1.6; }
+  @page { size: A4; margin: 12mm; }
+  body { font-size: 10pt; line-height: 1.5; }
   .wrap { max-width: none; padding: 0; }
   form, .actions, .copy, #progress, #error, .lead { display: none !important; }
-  #letters { display: block !important; }
-  h1 { font-size: 16pt; }
-  .counts .num { display: inline; font-size: 13pt; margin-left: 6pt; }
-  .counts .num small { font-size: 11pt; }
-  h2 { font-size: 13pt; margin-top: 14pt; }
-  .card, .letter { break-inside: avoid; padding: 8pt 10pt; margin-bottom: 8pt; }
-  #letters { break-before: page; }
+  #letters { display: block !important; break-before: page; }
+  #letters:has(#letter-list:empty) { display: none !important; }
+  h1 { font-size: 15pt; margin: 0; }
+  h2 { font-size: 12pt; margin: 10pt 0 4pt; }
+  #target { margin: 0 0 4pt; }
+  .counts { gap: 4pt; margin-bottom: 6pt; }
+  .counts li { padding: 2pt 6pt; }
+  .counts .num { display: inline; font-size: 12pt; margin-left: 6pt; }
+  .counts .num small { font-size: 10pt; }
+  #summary { padding: 0; }
+  .card, .letter { break-inside: avoid; padding: 5pt 8pt; margin-bottom: 5pt; }
+  .card h3, .letter h3 { font-size: 11pt; margin-bottom: 2pt; }
+  .badge { font-size: 10pt; }
+  .card dl { display: grid; grid-template-columns: 8em 1fr; column-gap: 6pt; }
+  .card dt { margin-top: 0; }
+  .checked { columns: 2; column-gap: 16pt; }
+  .checked li { break-inside: avoid; padding: 1pt 0; }
+  .note { font-size: 9pt; margin-top: 8pt; }
 }
 </style>
 </head>
@@ -250,6 +262,7 @@ function reset() {
   $("summary").hidden = true;
   $("cards-section").hidden = true;
   $("letters").hidden = true;
+  $("letter-list").replaceChildren();
   $("show-letters").hidden = true;
 }
 

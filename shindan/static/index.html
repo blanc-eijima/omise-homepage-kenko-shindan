@@ -58,6 +58,13 @@ button:disabled { opacity: .55; cursor: wait; }
 .counts .num { display: block; font-size: 40px; line-height: 1.2; }
 .counts .num small { font-size: 18px; margin-left: 2px; }
 .counts .none { color: var(--muted); font-weight: 400; }
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin: 0 0 16px; padding: 0; list-style: none; }
+.board li { border-radius: 6px; padding: 10px 12px; color: #fff; font-size: 15px; line-height: 1.4; }
+.board b { display: block; font-size: 17px; }
+.board .critical { background: var(--critical); }
+.board .warn { background: var(--warn); }
+.board .unknown { background: var(--unknown); }
+.board .ok { background: var(--ok); }
 .card { border: 1px solid var(--line); border-left: 8px solid var(--line); border-radius: 6px; padding: 16px 20px; margin: 0 0 16px; }
 .card.critical { border-left-color: var(--critical); }
 .card.warn { border-left-color: var(--warn); }
@@ -87,7 +94,7 @@ button:disabled { opacity: .55; cursor: wait; }
   @page { size: A4; margin: 12mm; }
   body { font-size: 10pt; line-height: 1.5; }
   .wrap { max-width: none; padding: 0; }
-  form, .actions, .copy, .operator, #progress, #error, .lead { display: none !important; }
+  form, .actions, .copy, .operator, #progress, #error, .lead, .board { display: none !important; }
   #letters { display: block !important; break-before: page; }
   #letters:has(#letter-list:empty) { display: none !important; }
   h1 { font-size: 15pt; margin: 0; }
@@ -129,6 +136,7 @@ button:disabled { opacity: .55; cursor: wait; }
     <h2>診断の結果</h2>
     <p id="target"></p>
     <ul class="counts" id="counts"></ul>
+    <ul class="board" id="board"></ul>
     <p id="summary" hidden></p>
     <div id="cards-section" hidden>
       <h2>急ぐ順の一覧</h2>
@@ -219,6 +227,13 @@ function showReport(report) {
     item.append(number);
     counts.append(item);
   }
+  // 並びを固定する。直す前と直した後を比べたとき、同じ場所の色が変わって見えるように。
+  const byId = new Map(report.checks.map((check) => [check.id, check]));
+  $("board").replaceChildren(...Object.keys(LABELS).filter((id) => byId.has(id)).map((id) => {
+    const tile = el("li", LABELS[id], byId.get(id).status);
+    tile.append(el("b", STATES[byId.get(id).status].text));
+    return tile;
+  }));
   const list = $("checked");
   list.replaceChildren();
   for (const check of checks) {

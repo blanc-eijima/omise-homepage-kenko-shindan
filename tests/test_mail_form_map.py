@@ -1,8 +1,10 @@
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from shindan.checks import contact_form, map_listing
 from shindan.checks.mail_settings import judge_mail
+from shindan.checks.page_checks import check_page_response
 from shindan.page import Fetched
 
 
@@ -119,6 +121,15 @@ class DemoListingTest(unittest.TestCase):
         self.assertEqual(result["status"], "warn")
         self.assertTrue(result["facts"]["phones_differ"])
         self.assertTrue(result["facts"]["demo_data"])
+
+    def test_fixed_demo_page_has_nothing_to_report(self):
+        host = "hidamari-shotengai-demo-fixed.netlify.app"
+        body = Path("demo-site-fixed/index.html").read_text(encoding="utf-8")
+        page = Fetched(f"https://{host}/", 200, {}, body)
+        self.assertEqual(map_listing.check_map_listing(page, host, "key")["status"], "ok")
+        self.assertEqual(contact_form.check_contact_form(page)["status"], "ok")
+        self.assertEqual(check_page_response(page)["status"], "ok")
+        self.assertNotIn("noindex", body)
 
 
 if __name__ == "__main__":

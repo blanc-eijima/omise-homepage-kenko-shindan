@@ -18,7 +18,10 @@ _TEL_LINK = re.compile(r'href=["\']tel:([^"\']+)', re.IGNORECASE)
 _TAG = re.compile(r"<(script|style)\b.*?</\1>|<[^>]+>", re.IGNORECASE | re.DOTALL)
 PHONE_DIGITS = (10, 11)
 # 架空のお店はGoogleマップに載らない。デモの照合だけ、この登録と比べて画面に架空と明記する。
-DEMO_LISTINGS = {"hidamari-shotengai-demo.netlify.app": {"nationalPhoneNumber": "03-0000-5678"}}
+DEMO_LISTINGS = {
+    "hidamari-shotengai-demo.netlify.app": {"nationalPhoneNumber": "03-0000-5678"},
+    "hidamari-shotengai-demo-fixed.netlify.app": {"nationalPhoneNumber": "03-0000-5678"},
+}
 
 
 def normalize_phone(text: str) -> str:

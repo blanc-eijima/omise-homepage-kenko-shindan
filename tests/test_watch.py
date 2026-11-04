@@ -43,6 +43,17 @@ class WorsenedTest(unittest.TestCase):
         self.assertEqual(worsened(crossed, state(("domain_expiry", "ok", {"days_left": 29}))), [])
 
 
+class CertificateDeadlineTest(unittest.TestCase):
+    def test_auto_renewal_window_is_quiet(self):
+        before = state(("ssl_certificate", "ok", {"days_left": 40}))
+        self.assertEqual(worsened(before, state(("ssl_certificate", "ok", {"days_left": 29}))), [])
+
+    def test_reported_when_renewal_seems_stuck(self):
+        before = state(("ssl_certificate", "ok", {"days_left": 15}))
+        lines = worsened(before, state(("ssl_certificate", "ok", {"days_left": 14})))
+        self.assertEqual(lines, ["安全な接続の証明書: 期限まであと14日"])
+
+
 class RunTest(unittest.TestCase):
     def setUp(self):
         folder = tempfile.TemporaryDirectory()

@@ -41,6 +41,19 @@ python -m venv .venv
 
 `--explain` と画面の説明文には `.env` の `ANTHROPIC_API_KEY` を使います。
 
+## 毎月の自動診断（保守する側の道具）
+
+Managed Agents のスケジュール実行で毎月1日に診断し、前回より悪くなったところだけを報告します。比べる処理は `shindan/watch_diff.py` のプログラムで、エージェントは動かして伝えるだけです。サイトの一覧と前回の結果はメモリストアに置き、リポジトリには入れません。サンドボックスにキーは渡さないので、Googleマップの照合は行いません。
+
+```
+.venv\Scripts\python -m shindan.watch setup https://www.example.jp/
+.venv\Scripts\python -m shindan.watch run
+.venv\Scripts\python -m shindan.watch schedule
+.venv\Scripts\python -m shindan.watch report
+```
+
+1回の費用は2件で約$0.04（実測）、上限は$0.50です。仕様は `SPEC.md` にあります。
+
 ## デモ用の架空サイト
 
 `demo-site/` は動画と確認のために作った架空のお店のサイトです。実在せず、ページにもそう書いてあります。わざと古い版番号の表示・画面に出たPHPのエラー・検索に出ない設定・暗号化されない送り先のフォームを入れています。フォームは押してもどこにも送信されません。架空のお店はGoogleマップに載らないので、このサイトの照合だけは決めておいた架空の登録と比べ、画面に「デモ用の架空データ」と出します。

@@ -15,7 +15,8 @@ LABELS = {
 STATE_TEXT = {"ok": "指摘なし", "unknown": "調べられず", "warn": "近いうちに", "critical": "すぐ対応"}
 # 調べられなかっただけのものは、悪化として知らせない。
 RANK = {"ok": 0, "unknown": 0, "warn": 1, "critical": 2}
-NEAR_DAYS = 30
+# 無料の証明書は残り30日ごろに自動で更新されるので、30日で知らせると毎回の誤報になる。
+NEAR_DAYS = {"ssl_certificate": 14, "domain_expiry": 30}
 
 
 def _by_id(state: dict) -> dict:
@@ -23,11 +24,12 @@ def _by_id(state: dict) -> dict:
 
 
 def _crossed_near(before: dict | None, now: dict) -> bool:
+    limit = NEAR_DAYS.get(now["id"])
     days = now.get("facts", {}).get("days_left")
-    if days is None or days > NEAR_DAYS:
+    if limit is None or days is None or days > limit:
         return False
     earlier = (before or {}).get("facts", {}).get("days_left")
-    return earlier is None or earlier > NEAR_DAYS
+    return earlier is None or earlier > limit
 
 
 def worsened(previous: dict | None, current: dict) -> list[str]:

@@ -11,6 +11,7 @@ TIMEOUT = 10
 WARN_DAYS = 30
 CRITICAL_DAYS = 7
 JP_SECOND_LEVEL = {"ac", "ad", "co", "ed", "go", "gr", "lg", "ne", "or"}
+FOREIGN_SECOND_LEVEL = {"co.uk", "org.uk", "com.au", "co.nz", "co.kr", "com.cn"}
 
 _STATE = re.compile(r"\[State\]\s+Connected \((\d{4}/\d{2}/\d{2})\)")
 _EXPIRES = re.compile(r"\[Expires on\]\s+(\d{4}/\d{2}/\d{2})")
@@ -19,9 +20,10 @@ _EXPIRES = re.compile(r"\[Expires on\]\s+(\d{4}/\d{2}/\d{2})")
 def registrable_domain(host: str) -> str:
     """www.example.co.jp -> example.co.jp"""
     labels = host.split(".")
-    # ponytail: 地域型 .jp と co.uk などの海外の属性型は未対応（期限は unknown になる）。
+    # ponytail: 地域型 .jp と、下の一覧に無い海外の属性型は未対応（期限は unknown になる）。
     # 必要になったら Public Suffix List へ切り替える。
-    keep = 3 if labels[-1] == "jp" and labels[-2:-1] and labels[-2] in JP_SECOND_LEVEL else 2
+    second_level = labels[-1] == "jp" and labels[-2:-1] and labels[-2] in JP_SECOND_LEVEL
+    keep = 3 if second_level or ".".join(labels[-2:]) in FOREIGN_SECOND_LEVEL else 2
     return ".".join(labels[-keep:])
 
 

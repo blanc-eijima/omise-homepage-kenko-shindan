@@ -151,6 +151,8 @@ button:disabled { opacity: .55; cursor: wait; }
     <div id="hints" hidden>
       <p class="plain">外から分かった名前は次のとおりです。契約先と違うこともあるので、参考としてご覧ください。</p>
       <ul class="hints" id="hint-list"></ul>
+      <p class="plain" id="hint-hosting" hidden></p>
+      <p class="plain" id="hint-platform" hidden>AmazonやGoogleなどの名前は、サーバー会社や制作会社が裏側で使っている仕組みのことがあります。そこと直接契約しているとは限らないので、請求書やメールと合わせて確かめてください。</p>
     </div>
     <h2>業者に連絡がつかないとき</h2>
     <ol class="plain-steps">
@@ -265,10 +267,14 @@ function showReport(report) {
 function showHints(hints) {
   const rows = [];
   if (hints.credit) rows.push("ページに書かれた制作の表示: " + hints.credit);
-  if (hints.dns && hints.dns.length) rows.push("ホームページの住所の管理先: " + hints.dns.join("、"));
-  if (hints.mail && hints.mail.length) rows.push("メールの管理先: " + hints.mail.join("、"));
+  if (hints.server && hints.server.length) rows.push("サーバーの会社: " + hints.server.join("、"));
+  if (hints.dns && hints.dns.length) rows.push("ホームページの住所（ドメイン）の設定先: " + hints.dns.join("、"));
+  if (hints.mail && hints.mail.length) rows.push("メールの受け取り先: " + hints.mail.join("、"));
   $("hint-list").replaceChildren(...rows.map((text) => el("li", text)));
   $("hints").hidden = rows.length === 0;
+  $("hint-platform").hidden = !hints.platform;
+  $("hint-hosting").textContent = hints.hosting ? hints.hosting + "は、制作会社がよく使う公開の仕組みです。お店が直接契約しているとは限らないので、制作を頼んだ会社を探してください。" : "";
+  $("hint-hosting").hidden = !hints.hosting;
 }
 
 function makeCard(card) {

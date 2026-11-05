@@ -1,4 +1,4 @@
-# おみせのホームページ健康診断
+# お店のホームページ健康診断
 
 ## コマンド
 - テスト: `.venv/Scripts/python -m unittest discover -s tests`（Claudeは呼ばない・無料）

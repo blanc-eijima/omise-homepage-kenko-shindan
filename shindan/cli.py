@@ -50,7 +50,7 @@ def scan(raw_url: str, shop_name: str | None = None) -> dict:
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="おみせのホームページ健康診断")
+    parser = argparse.ArgumentParser(description="お店のホームページ健康診断")
     parser.add_argument("url")
     parser.add_argument("--explain", action="store_true", help="Claudeの読み解きと依頼文を付ける")
     parser.add_argument("--name", help="Googleマップで探すお店の名前と地域")

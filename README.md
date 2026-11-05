@@ -37,7 +37,7 @@ python -m venv .venv
 
 画面で使うときは `.venv\Scripts\python -m shindan.web` を実行し、`http://127.0.0.1:8765/` を開きます。
 
-公開版は https://omise-kenko-shindan.fly.dev/ です。
+公開版は https://shindan.blanc.to/ です。
 
 `--explain` と画面の説明文には `.env` の `ANTHROPIC_API_KEY` を使います。
 

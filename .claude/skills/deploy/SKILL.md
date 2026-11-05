@@ -8,6 +8,6 @@ disable-model-invocation: true
 3. `flyctl deploy --remote-only --ha=false` を実行する。`.env` はイメージに入らない（`.dockerignore`）
 4. `flyctl status` でマシンが1台で `started` なことを確かめる。2台あれば回数の記録が分かれるので止まって知らせる
 5. 公開URLで確かめる。Claudeを呼ばないので無料
-   - `https://omise-kenko-shindan.fly.dev/` が200
+   - `https://shindan.blanc.to/` が200
    - `/api/scan` へ `{"url":"http://169.254.169.254/"}` を送り400（内部アドレスを拒否）
 6. デプロイで回数の記録が0に戻ることを報告に添える

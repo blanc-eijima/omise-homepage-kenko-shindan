@@ -7,26 +7,40 @@
 <title>洋菓子 ひだまり堂（架空のお店）</title>
 <link rel="stylesheet" href="/wp-content/themes/hidamari/style.css">
 <style>
-body { margin: 0; background: #fff; color: #333; font-family: "Hiragino Sans", Meiryo, sans-serif; line-height: 1.8; }
+body { margin: 0; background: #fff; color: #33241a; font-family: "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif; line-height: 1.8; }
 .demo { background: #1f3a5f; color: #fff; padding: 10px 16px; text-align: center; font-weight: 700; }
-.php { margin: 0; padding: 8px 16px; font-family: serif; font-size: 14px; overflow-wrap: anywhere; }
-header { background: #7a4a24; color: #fff; padding: 20px 16px; }
-h1 { margin: 0; font-size: 26px; }
-main { max-width: 680px; margin: 0 auto; padding: 8px 16px 32px; }
-h2 { border-bottom: 2px solid #7a4a24; font-size: 18px; }
+.php { margin: 0; padding: 10px 16px; font-family: serif; font-size: 16px; overflow-wrap: anywhere; }
+.site { background: #3b2314; color: #fff; padding: 18px 24px; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 32px; }
+.site h1 { margin: 0; font: 700 30px/1.3 "Hiragino Mincho ProN", "Yu Mincho", serif; letter-spacing: .08em; }
+.site nav a { color: #fff; margin-left: 20px; text-decoration: none; }
+.hero { position: relative; height: 420px; background: #3b2314 url(/images/hero.jpg) center / cover; }
+.hero p { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 48px 24px 20px; color: #fff; font: 700 34px/1.5 "Hiragino Mincho ProN", "Yu Mincho", serif; background: linear-gradient(transparent, rgba(30, 15, 5, .8)); }
+main { max-width: 960px; margin: 0 auto; padding: 16px 16px 40px; }
+h2 { margin: 32px 0 16px; font: 700 26px/1.4 "Hiragino Mincho ProN", "Yu Mincho", serif; border-bottom: 2px solid #3b2314; padding-bottom: 6px; }
+.items { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+.items img { display: block; width: 100%; height: 190px; object-fit: cover; }
+.items h3 { margin: 10px 0 0; font-size: 18px; }
+.items p { margin: 0; }
 label { display: block; margin-top: 12px; }
 input, textarea { width: 100%; box-sizing: border-box; padding: 8px; font-size: 16px; border: 1px solid #999; }
-button { margin-top: 12px; padding: 8px 24px; font-size: 16px; }
+button { margin-top: 12px; padding: 10px 28px; font-size: 16px; background: #3b2314; color: #fff; border: 0; cursor: pointer; }
 </style>
 </head>
 <body>
 <div class="demo">これは診断のデモ用に作った架空のお店のサイトの「直した後」の版です。実在しません。</div>
-<header><h1>洋菓子 ひだまり堂</h1></header>
+<header class="site"><h1>洋菓子 ひだまり堂</h1><nav><a href="#items">お菓子</a><a href="#about">お店のご案内</a><a href="#contact">お問い合わせ</a></nav></header>
+<div class="hero" role="img" aria-label="ショーケースに並ぶケーキ"><p>毎朝焼き上げる、商店街の小さな洋菓子店</p></div>
 <main>
-<h2>お店のご案内</h2>
+<h2 id="items">お菓子</h2>
+<div class="items">
+<article><img src="/images/shortcake.jpg" alt="いちごのショートケーキ"><h3>いちごのショートケーキ</h3><p>480円</p></article>
+<article><img src="/images/tart.jpg" alt="季節のフルーツタルト"><h3>季節のフルーツタルト</h3><p>560円</p></article>
+<article><img src="/images/yakigashi.jpg" alt="焼き菓子の詰め合わせ"><h3>焼き菓子の詰め合わせ</h3><p>1,800円</p></article>
+</div>
+<h2 id="about">お店のご案内</h2>
 <p>架空県ひだまり市の商店街にある、小さな洋菓子店です。</p>
 <p>電話 <a href="tel:03-0000-5678">03-0000-5678</a><br>定休日 水曜日</p>
-<h2>お問い合わせ</h2>
+<h2 id="contact">お問い合わせ</h2>
 <form method="post" action="https://hidamari-shotengai-demo-fixed.netlify.app/contact/send" onsubmit="event.preventDefault(); this.querySelector('output').textContent = 'デモのため、送信はされません。';">
 <label>お名前 <input name="name"></label>
 <label>お問い合わせ内容 <textarea name="message" rows="4"></textarea></label>

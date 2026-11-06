@@ -111,6 +111,41 @@ class MapTest(unittest.TestCase):
         self.assertNotIn("secret", str(result))
 
 
+class InfoPageTest(unittest.TestCase):
+    TOP = (
+        '<a href="tel:0120123104">フリーダイヤル</a>'
+        '<a href="/company">会社概要</a><a href="https://other.example.com/about">他社</a>'
+        '<a href="/blog/1">ブログ</a><a href="/access/">地図</a>'
+    )
+    LISTING = {"nationalPhoneNumber": "0744-47-4609"}
+
+    def test_links_to_info_pages_on_the_same_site_only(self):
+        urls = map_listing.info_page_urls(make_page(self.TOP))
+        self.assertEqual(urls, ["https://shop.example.co.jp/company", "https://shop.example.co.jp/access/"])
+
+    def test_number_on_company_page_is_not_a_mismatch(self):
+        company = Fetched("https://shop.example.co.jp/company", 200, {}, "<p>TEL 0744-47-4609</p>")
+        with mock.patch.object(map_listing, "fetch", return_value=company) as fetch:
+            phones, pages = map_listing.site_phones_and_pages(make_page(self.TOP), self.LISTING)
+        fetch.assert_called_once()
+        self.assertIn("0744474609", phones)
+        self.assertEqual(map_listing.judge_listing(phones, self.LISTING, pages)["facts"]["other_pages_read"], ["/company"])
+        self.assertEqual(map_listing.judge_listing(phones, self.LISTING, pages)["status"], "ok")
+
+    def test_no_extra_pages_when_top_already_matches(self):
+        top = self.TOP + "<p>0744-47-4609</p>"
+        with mock.patch.object(map_listing, "fetch") as fetch:
+            map_listing.site_phones_and_pages(make_page(top), self.LISTING)
+        fetch.assert_not_called()
+
+    def test_still_differs_when_no_page_has_it(self):
+        other = Fetched("https://shop.example.co.jp/company", 200, {}, "<p>TEL 0744-00-0000</p>")
+        with mock.patch.object(map_listing, "fetch", return_value=other):
+            phones, pages = map_listing.site_phones_and_pages(make_page(self.TOP), self.LISTING)
+        self.assertEqual(len(pages), 2)
+        self.assertEqual(map_listing.judge_listing(phones, self.LISTING, pages)["status"], "warn")
+
+
 class DemoListingTest(unittest.TestCase):
     def test_demo_host_says_so_and_skips_the_real_search(self):
         host = "hidamari-shotengai-demo.netlify.app"

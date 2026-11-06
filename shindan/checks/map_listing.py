@@ -4,10 +4,10 @@ import re
 import unicodedata
 import urllib.error
 import urllib.request
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 from shindan.checks.domain import registrable_domain
-from shindan.page import Fetched, read_head
+from shindan.page import Fetched, fetch, read_head
 
 TIMEOUT = 15
 SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
@@ -17,6 +17,14 @@ _PHONE = re.compile(r"(?<![\d-])(0\d{0,4}[-‐ー()（） ]{0,2}\d{1,4}[-‐ー(
 _TEL_LINK = re.compile(r'href=["\']tel:([^"\']+)', re.IGNORECASE)
 _TAG = re.compile(r"<(script|style)\b.*?</\1>|<[^>]+>", re.IGNORECASE | re.DOTALL)
 PHONE_DIGITS = (10, 11)
+# トップに地図の番号が無いときだけ、番号が載っていそうなページを読む。読む数は上限を決める。
+_LINK = re.compile(r'<a\b[^>]*href=["\']([^"\'#]+)["\'][^>]*>(.*?)</a>', re.IGNORECASE | re.DOTALL)
+_INFO_PAGE = re.compile(
+    r"会社概要|会社案内|会社情報|企業情報|店舗情報|店舗案内|お店の情報|アクセス|所在地|特定商取引"
+    r"|company|about|access|profile|shop-?info|tokusho",
+    re.IGNORECASE,
+)
+MAX_INFO_PAGES = 3
 # 架空のお店はGoogleマップに載らない。デモの照合だけ、この登録と比べて画面に架空と明記する。
 DEMO_LISTINGS = {
     "hidamari-shotengai-demo.netlify.app": {"nationalPhoneNumber": "03-0000-5678"},
@@ -35,6 +43,40 @@ def find_phones(html: str) -> list[str]:
     found = _TEL_LINK.findall(html) + _PHONE.findall(normalized)
     phones = {normalize_phone(p) for p in found}
     return sorted(p for p in phones if len(p) in PHONE_DIGITS and p.startswith("0"))
+
+
+def info_page_urls(page: Fetched) -> list[str]:
+    """トップから同じサイトの会社概要・アクセス等へのリンクを、出てきた順に返す。"""
+    host = urlsplit(page.url).hostname or ""
+    urls: list[str] = []
+    for href, text in _LINK.findall(page.body):
+        url = urljoin(page.url, href.strip())
+        parts = urlsplit(url)
+        if parts.scheme not in ("http", "https") or parts.hostname != host:
+            continue
+        if url.rstrip("/") == page.url.rstrip("/") or url in urls:
+            continue
+        if _INFO_PAGE.search(_TAG.sub(" ", text)) or _INFO_PAGE.search(parts.path):
+            urls.append(url)
+    return urls[:MAX_INFO_PAGES]
+
+
+def site_phones_and_pages(page: Fetched, listing: dict | None) -> tuple[list[str], list[str]]:
+    """トップの番号に地図の番号が無ければ、会社概要などのページの番号も足す。"""
+    phones = set(find_phones(page.body))
+    raw = (listing or {}).get("nationalPhoneNumber", "")
+    if not raw or normalize_phone(raw) in phones:
+        return sorted(phones), []
+    pages = []
+    for url in info_page_urls(page):
+        found = fetch(url)
+        if found is None or found.status != 200:
+            continue
+        pages.append(urlsplit(found.url).path or "/")
+        phones |= set(find_phones(found.body))
+        if normalize_phone(raw) in phones:
+            break
+    return sorted(phones), pages
 
 
 def _search(query: str, key: str) -> list[dict]:
@@ -62,7 +104,7 @@ def pick_own_listing(places: list[dict], host: str) -> dict | None:
     return None
 
 
-def judge_listing(site_phones: list[str], listing: dict | None) -> dict:
+def judge_listing(site_phones: list[str], listing: dict | None, pages: list[str] | None = None) -> dict:
     if listing is None:
         # 見つからない＝未登録とは限らない。問題としては扱わない。
         facts = {"listing_found": False, "site_phones": site_phones}
@@ -79,6 +121,8 @@ def judge_listing(site_phones: list[str], listing: dict | None) -> dict:
             "site_phones": site_phones,
             "listing_phone": listing_phone,
             "phones_differ": mismatch,
+            # トップ以外に読んだページ。空ならトップだけで比べた。
+            "other_pages_read": pages or [],
         },
     }
 
@@ -95,4 +139,5 @@ def check_map_listing(page: Fetched | None, host: str, key: str, name: str | Non
     except (OSError, ValueError) as exc:
         reason = f"HTTP {exc.code}" if isinstance(exc, urllib.error.HTTPError) else type(exc).__name__
         return {"id": "map_listing", "status": "unknown", "facts": {"error": reason}}
-    return judge_listing(find_phones(page.body), listing)
+    phones, pages = site_phones_and_pages(page, listing)
+    return judge_listing(phones, listing, pages)

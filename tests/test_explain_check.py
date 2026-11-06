@@ -161,6 +161,25 @@ class DateFormTest(unittest.TestCase):
         bad["cards"][0]["what_is_happening"] = "期限は2026-11-08です。"
         self.assertIn("店主向けの欄の日付の形: 2026-11-08", find_problems(bad, SCAN))
 
+    def test_phone_number_is_not_a_date(self):
+        scan = {**SCAN, "checks": SCAN["checks"] + [
+            {"id": "map_listing", "status": "ok", "facts": {"site_phone": "0744474686"}}]}
+        fine = good()
+        fine["cards"][0]["what_is_happening"] = "サイトの番号は 0744-47-4686 です。"
+        self.assertEqual(find_problems(fine, scan), [])
+
+
+class DnsRecordNameTest(unittest.TestCase):
+    SCAN = {**SCAN, "checks": SCAN["checks"] + [{"id": "mail_settings", "status": "ok", "facts": {}}]}
+
+    def test_record_under_known_domain_passes(self):
+        fine = good()
+        fine["requests"][0]["body"] = "_dmarc.example.co.jp にTXTレコードの追加をお願いします。"
+        self.assertEqual(find_problems(fine, self.SCAN), [])
+        bad = good()
+        bad["requests"][0]["body"] = "_dmarc.other-shop.com を確認してください。"
+        self.assertIn("調査結果に無いドメイン名: other-shop.com", find_problems(bad, self.SCAN))
+
 
 NO_ISSUES = {"issues": []}
 

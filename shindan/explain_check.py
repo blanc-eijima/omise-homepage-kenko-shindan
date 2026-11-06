@@ -16,7 +16,8 @@ TOPICS = {
     "map_listing": ("Googleマップ", "Google マップ"),
 }
 
-_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+# 前後に数字やハイフンが続くもの（0744-47-4686 のような電話番号）は日付ではない。
+_ISO_DATE = re.compile(r"(?<![\d-])\d{4}-\d{2}-\d{2}(?![\d-])")
 # 外から見えない問題があっても、この一文で店主が確認をやめてしまう。
 _NO_NEED_TO_ASK = re.compile(r"(連絡|相談|依頼|確認).{0,8}(必要は?(あり|ござい)ません|不要)")
 _NUMBER = re.compile(r"\d+")
@@ -24,7 +25,7 @@ _NUMBER = re.compile(r"\d+")
 _COUNT = re.compile(r"\d+(?=つ|点|件|項目|通|か所|箇所)")
 # 調査結果の電話番号は数字だけ。ハイフンで区切って書いても同じ番号として数える。
 _PHONE = re.compile(r"(?<![\d-])0\d{1,4}-\d{1,4}-\d{3,4}(?![\d-])")
-_DOMAIN = re.compile(r"[a-z0-9-]+(?:\.[a-z0-9-]+)+")
+_DOMAIN = re.compile(r"[a-z0-9_-]+(?:\.[a-z0-9_-]+)+")
 # robots.txt や wp-config.php はファイルの名前で、ドメイン名ではない。
 _FILE_NAME = (".txt", ".php", ".html", ".htm", ".xml", ".css", ".js")
 
@@ -38,10 +39,9 @@ def _numbers(text: str) -> set[int]:
 
 
 def _domains(text: str) -> set[str]:
-    return {
-        d for d in _DOMAIN.findall(_normalize(text))
-        if not d[0].isdigit() and not d.endswith(_FILE_NAME)
-    }
+    # _dmarc.example.jp のような設定の置き場所は、店のドメインと同じものとして数える。
+    found = {re.sub(r"^(?:_[a-z0-9-]+\.)+", "", d) for d in _DOMAIN.findall(_normalize(text))}
+    return {d for d in found if not d[0].isdigit() and not d.endswith(_FILE_NAME)}
 
 
 def _all_text(explanation: dict) -> str:

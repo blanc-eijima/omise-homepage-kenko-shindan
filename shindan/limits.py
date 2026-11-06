@@ -5,11 +5,20 @@ from datetime import datetime, timedelta, timezone
 
 JST = timezone(timedelta(hours=9))
 DAILY_LIMIT = 30
+# 審査期間（提出締切の11/8〜ライブ審査の11/10、日本時間）だけ上げる。過ぎたら自動で30へ戻る。
+REVIEW_DAYS = ("2026-11-08", "2026-11-10")
+REVIEW_DAILY_LIMIT = 100
 PER_IP_LIMIT = 5
 PER_IP_WINDOW = 3600
 
 DAILY_MESSAGE = "本日の診断の受付は終了しました。明日もう一度お試しください"
 PER_IP_MESSAGE = "短い時間に続けて診断されています。1時間ほどあけてお試しください"
+
+
+def daily_limit(day: str) -> int:
+    """日本時間の日付（YYYY-MM-DD）→ その日の全体の上限。"""
+    first, last = REVIEW_DAYS
+    return REVIEW_DAILY_LIMIT if first <= day <= last else DAILY_LIMIT
 
 
 class UsageLimits:
@@ -35,7 +44,7 @@ class UsageLimits:
             recent = [t for t in self._by_ip.get(ip, []) if now - t < PER_IP_WINDOW]
             if len(recent) >= PER_IP_LIMIT:
                 return PER_IP_MESSAGE
-            if self._count >= DAILY_LIMIT:
+            if self._count >= daily_limit(day):
                 return DAILY_MESSAGE
             self._by_ip[ip] = recent + [now]
             self._count += 1
@@ -51,3 +60,6 @@ class UsageLimits:
     def used_today(self) -> int:
         with self._lock:
             return self._count
+
+    def limit_today(self) -> int:
+        return daily_limit(datetime.fromtimestamp(self._clock(), JST).date().isoformat())

@@ -11,7 +11,7 @@ from pathlib import Path
 from shindan.cli import scan
 from shindan.explain import ExplainError, explain
 from shindan.guard import UnsafeTarget
-from shindan.limits import DAILY_LIMIT, UsageLimits
+from shindan.limits import UsageLimits
 
 # 既定はこのPCの中だけ。公開先では Dockerfile が環境変数で指定する。
 HOST = os.environ.get("HOST", "127.0.0.1")
@@ -151,7 +151,7 @@ class Handler(BaseHTTPRequestHandler):
             except UnsafeTarget:
                 _limits.give_back(ip)
                 return 400, {"error": "このアドレスは調べられません。入力をご確認ください"}
-            print(f"診断 本日{_limits.used_today()}/{DAILY_LIMIT}件", file=sys.stderr)
+            print(f"診断 本日{_limits.used_today()}/{_limits.limit_today()}件", file=sys.stderr)
             return 200, {"id": _keep_scan(report), "report": report}
 
         self._send_slow(work)

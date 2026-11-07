@@ -39,7 +39,8 @@ class CraftedPageTest(unittest.TestCase):
     """閉じないタグを並べた2MBのページでも、すぐに終わる（前は1件で1時間近く止まった）。"""
 
     PAGES = ["<" * 2_000_000, "<script" * 285_000, "<style" * 330_000,
-             '<a href="x">' * 160_000, '<a href="/about/">' * 110_000]
+             '<a href="x">' * 160_000, '<a href="/about/">' * 110_000,
+             "<a " * 666_000 + ">"]  # href の無い「<a」が最後の「>」1つまで続く
 
     def test_each_page_is_quick(self):
         for body in self.PAGES:

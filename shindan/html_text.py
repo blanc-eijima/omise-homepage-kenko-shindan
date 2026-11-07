@@ -93,6 +93,8 @@ def iter_links(html: str) -> Iterator[tuple[str, str]]:
             return
         href = _last_href(html, start, tag_end)
         if href is None:
+            # 「>」までにある別の「<a」も同じ「>」で閉じ、href が無いのは同じ。読み直さずに先へ進む
+            position = tag_end + 1
             continue
         close = lower.find("</a>", tag_end)
         if close < 0:

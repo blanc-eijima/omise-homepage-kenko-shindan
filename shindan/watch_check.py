@@ -11,7 +11,6 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from shindan.cli import scan
-from shindan.guard import UnsafeTarget
 from shindan.watch_diff import worsened
 
 JST = timezone(timedelta(hours=9))
@@ -26,7 +25,9 @@ def check_site(url: str, state_dir: Path, scan_site=scan) -> str:
     """1件調べて前回の結果を更新し、報告の1行を返す。"""
     try:
         report = scan_site(url)
-    except (UnsafeTarget, OSError, ValueError) as exc:
+    except Exception as exc:  # noqa: BLE001
+        # 例外の文面にはサイトが返した文字が入りうる。出力はそのままエージェントに渡るので、
+        # 種類の名前だけを書く（文面に仕込んだ指示がエージェントへ届かないように）。
         return f"- {url}: 調べられませんでした（{type(exc).__name__}）"
     path = state_dir / "sites" / f"{report['host']}.json"
     previous = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None

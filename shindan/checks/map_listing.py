@@ -7,6 +7,7 @@ import urllib.request
 from urllib.parse import urljoin, urlsplit
 
 from shindan.checks.domain import registrable_domain
+from shindan.html_text import iter_links, strip_tags
 from shindan.page import Fetched, fetch, read_head
 
 TIMEOUT = 15
@@ -15,10 +16,8 @@ FIELD_MASK = "places.displayName,places.nationalPhoneNumber,places.websiteUri"
 # 日本の電話番号。全角・ハイフン違いは NFKC と数字化で吸収する。
 _PHONE = re.compile(r"(?<![\d-])(0\d{0,4}[-‐ー()（） ]{0,2}\d{1,4}[-‐ー()（） ]{0,2}\d{3,4})(?![\d-])")
 _TEL_LINK = re.compile(r'href=["\']tel:([^"\']+)', re.IGNORECASE)
-_TAG = re.compile(r"<(script|style)\b.*?</\1>|<[^>]+>", re.IGNORECASE | re.DOTALL)
 PHONE_DIGITS = (10, 11)
 # トップに地図の番号が無いときだけ、番号が載っていそうなページを読む。読む数は上限を決める。
-_LINK = re.compile(r'<a\b[^>]*href=["\']([^"\'#]+)["\'][^>]*>(.*?)</a>', re.IGNORECASE | re.DOTALL)
 _INFO_PAGE = re.compile(
     r"会社概要|会社案内|会社情報|企業情報|店舗情報|店舗案内|お店の情報|アクセス|所在地|特定商取引"
     r"|company|about|access|profile|shop-?info|tokusho",
@@ -39,7 +38,7 @@ def normalize_phone(text: str) -> str:
 
 def find_phones(html: str) -> list[str]:
     """サイトの電話番号（FAX等も含みうる）。数字だけの形で返す。"""
-    normalized = unicodedata.normalize("NFKC", _TAG.sub(" ", html))
+    normalized = unicodedata.normalize("NFKC", strip_tags(html))
     found = _TEL_LINK.findall(html) + _PHONE.findall(normalized)
     phones = {normalize_phone(p) for p in found}
     return sorted(p for p in phones if len(p) in PHONE_DIGITS and p.startswith("0"))
@@ -49,16 +48,18 @@ def info_page_urls(page: Fetched) -> list[str]:
     """トップから同じサイトの会社概要・アクセス等へのリンクを、出てきた順に返す。"""
     host = urlsplit(page.url).hostname or ""
     urls: list[str] = []
-    for href, text in _LINK.findall(page.body):
+    for href, text in iter_links(page.body):
         url = urljoin(page.url, href.strip())
         parts = urlsplit(url)
         if parts.scheme not in ("http", "https") or parts.hostname != host:
             continue
         if url.rstrip("/") == page.url.rstrip("/") or url in urls:
             continue
-        if _INFO_PAGE.search(_TAG.sub(" ", text)) or _INFO_PAGE.search(parts.path):
+        if _INFO_PAGE.search(strip_tags(text)) or _INFO_PAGE.search(parts.path):
             urls.append(url)
-    return urls[:MAX_INFO_PAGES]
+            if len(urls) == MAX_INFO_PAGES:  # 先頭の3件だけ使う。リンクが何万あっても読み続けない
+                break
+    return urls
 
 
 def site_phones_and_pages(page: Fetched, listing: dict | None) -> tuple[list[str], list[str]]:

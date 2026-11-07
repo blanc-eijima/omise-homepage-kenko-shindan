@@ -12,6 +12,7 @@ TIMEOUT = 10
 # 残り14日を切ったら自動更新の失敗を疑う。
 WARN_DAYS = 14
 CRITICAL_DAYS = 7
+LOCATION_CHARS = 200
 
 
 def _read_certificate(host: str) -> bytes:
@@ -107,7 +108,8 @@ def check_http_redirect(host: str) -> dict:
         "status": "ok" if redirected else "warn",
         "facts": {
             "http_status": status_code,
-            "location": location,
+            # 転送先はサイトが自由に書ける（最大64KB）。読み解きへ渡すのは頭の部分だけ。
+            "location": location[:LOCATION_CHARS],
             "redirects_to_https": redirected,
         },
     }

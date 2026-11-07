@@ -1,3 +1,4 @@
+import time
 import unittest
 from types import SimpleNamespace
 
@@ -179,6 +180,22 @@ class DnsRecordNameTest(unittest.TestCase):
         bad = good()
         bad["requests"][0]["body"] = "_dmarc.other-shop.com を確認してください。"
         self.assertIn("調査結果に無いドメイン名: other-shop.com", find_problems(bad, self.SCAN))
+
+
+class LongSiteValueTest(unittest.TestCase):
+    def test_long_value_from_the_site_is_checked_quickly(self):
+        # サイトが返した点の無い長い転送先。照合が文字数の2乗になると、ここで何分も止まる。
+        scan = {**SCAN, "checks": SCAN["checks"] + [
+            {"id": "http_redirect", "status": "ok", "facts": {"location": "a" * 100_000}}]}
+        started = time.monotonic()
+        self.assertEqual(find_problems(good(), scan), [])
+        self.assertLess(time.monotonic() - started, 2)
+
+    def test_very_long_digit_run_from_the_site_does_not_fail_the_check(self):
+        # int() にすると4300桁を超えたところで ValueError になり、その診断が失敗していた。
+        scan = {**SCAN, "checks": SCAN["checks"] + [
+            {"id": "http_redirect", "status": "ok", "facts": {"location": "/" + "9" * 5000}}]}
+        self.assertEqual(find_problems(good(), scan), [])
 
 
 NO_ISSUES = {"issues": []}

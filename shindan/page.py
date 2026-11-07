@@ -1,5 +1,6 @@
 """トップページとrobots.txtをGETで読む。転送先も毎回、公開アドレスか確かめる。"""
 import ssl
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -10,6 +11,7 @@ from shindan.guard import PublicHTTPConnection, PublicHTTPSConnection, UnsafeTar
 
 TIMEOUT = 10
 MAX_BYTES = 2_000_000
+READ_SECONDS = 20
 MAX_REDIRECTS = 5
 USER_AGENT = "omise-kenko-shindan/0.1"
 
@@ -37,6 +39,23 @@ class _PublicHTTPS(urllib.request.HTTPSHandler):
         return self.do_open(PublicHTTPSConnection, req, context=self._context)
 
 
+def _read_body(response) -> bytes:
+    """本文を MAX_BYTES まで読む。TIMEOUT は1回の受信ごとなので、少しずつ返し続けるサイトに
+    いつまでも付き合わないよう、全体にも READ_SECONDS の上限を置く。"""
+    deadline = time.monotonic() + READ_SECONDS
+    chunks: list[bytes] = []
+    size = 0
+    while size < MAX_BYTES:
+        if time.monotonic() > deadline:
+            raise TimeoutError("ページの読み込みに時間がかかりすぎました")
+        chunk = response.read1(min(65536, MAX_BYTES - size))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        size += len(chunk)
+    return b"".join(chunks)
+
+
 def _open(url: str) -> Fetched:
     """転送は追わずに1回だけ読む。証明書切れのサイトも中身は読めるよう検証しない。"""
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -54,7 +73,7 @@ def _open(url: str) -> Fetched:
     except urllib.error.HTTPError as exc:
         response = exc  # 3xx・4xx・5xx も調査結果として読む
     with response:
-        body = response.read(MAX_BYTES).decode("utf-8", "replace")
+        body = _read_body(response).decode("utf-8", "replace")
         headers = {name.lower(): value for name, value in response.headers.items()}
         return Fetched(url, response.status, headers, body)
 

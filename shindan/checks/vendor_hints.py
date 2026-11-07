@@ -8,9 +8,9 @@ from html import unescape
 
 from shindan.checks.domain import registrable_domain
 from shindan.checks.mail_settings import _query
+from shindan.html_text import strip_tags
 from shindan.page import Fetched
 
-_TAGS = re.compile(r"<(script|style)\b.*?</\1>|<[^>]+>", re.I | re.S)
 # 「制作：」のように区切りがあるか、英語の by があるものだけ。「ホームページ制作」のような案内を拾わない。
 _CREDIT = re.compile(
     r"(?:制作(?:会社)?\s*[:：]|(?:Web ?[Dd]esign|Designed|Produced|Created)(?: by|\s*:))"
@@ -90,7 +90,7 @@ def _server_names(host: str, own: str) -> tuple[list[str], bool]:
 
 def find_credit(html: str) -> str | None:
     """ページの末尾（フッター）にある制作の表示だけを読む。本文の「ホームページ制作」を拾わない。"""
-    text = unescape(_TAGS.sub(" ", html))
+    text = unescape(strip_tags(html))
     tail = " ".join(text.split())[-TAIL_CHARS:]
     for match in _CREDIT.finditer(tail):
         name = match.group(1).strip()

@@ -25,7 +25,9 @@ _NUMBER = re.compile(r"\d+")
 _COUNT = re.compile(r"\d+(?=つ|点|件|項目|通|か所|箇所)")
 # 調査結果の電話番号は数字だけ。ハイフンで区切って書いても同じ番号として数える。
 _PHONE = re.compile(r"(?<![\d-])0\d{1,4}-\d{1,4}-\d{3,4}(?![\d-])")
-_DOMAIN = re.compile(r"[a-z0-9_-]+(?:\.[a-z0-9_-]+)+")
+# 文字の並びの途中からは探し直さない。サイトが返す長い文字列（転送先など）で、
+# 照合が文字数の2乗の時間になり、画面全体が止まるのを防ぐ。見つかるものは変わらない。
+_DOMAIN = re.compile(r"(?<![a-z0-9_-])[a-z0-9_-]+(?:\.[a-z0-9_-]+)+")
 # robots.txt や wp-config.php はファイルの名前で、ドメイン名ではない。
 _FILE_NAME = (".txt", ".php", ".html", ".htm", ".xml", ".css", ".js")
 
@@ -34,8 +36,10 @@ def _normalize(text: str) -> str:
     return unicodedata.normalize("NFKC", text).lower()
 
 
-def _numbers(text: str) -> set[int]:
-    return {int(token) for token in _NUMBER.findall(_normalize(text))}
+def _numbers(text: str) -> set[str]:
+    # int() にしない: サイトが返す4300桁を超える数字の並びで ValueError になり、その診断が失敗する。
+    # 先頭の0を外した文字列なら「007」と「7」を同じ数として比べられる。
+    return {token.lstrip("0") or "0" for token in _NUMBER.findall(_normalize(text))}
 
 
 def _domains(text: str) -> set[str]:
@@ -58,7 +62,7 @@ def _check_facts(explanation: dict, scan: dict) -> list[str]:
     )
     text = _COUNT.sub(" ", _normalize(_all_text(explanation)))
     text = _PHONE.sub(lambda m: m.group().replace("-", ""), text)
-    problems = [f"調査結果に無い数字: {n}" for n in sorted(_numbers(text) - _numbers(known))]
+    problems = [f"調査結果に無い数字: {n}" for n in sorted(_numbers(text) - _numbers(known), key=lambda n: (len(n), n))]
     problems += [f"調査結果に無いドメイン名: {d}" for d in sorted(_domains(text) - _domains(known))]
     return problems
 
